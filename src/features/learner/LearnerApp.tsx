@@ -20,6 +20,7 @@ import type {
 } from '../../data/practiceData'
 import {
   setLearnerInactive,
+  sectionLabel,
   type LearnerRecord,
 } from '../teacher/dashboard/sectionData'
 import type { OralResult } from '../../screens/learner/OralAssessment'
@@ -241,6 +242,8 @@ export default function LearnerApp() {
       return (
         <LearnerDashboard
           learnerName={learnerName}
+          learnerGrade={learner.grade}
+          learnerSection={sectionLabel(learner.sectionId).split('·')[1]?.trim() ?? learner.sectionId}
           onLogout={handleExit}
           readingTitle={automaticActivity?.title}
           automaticLevel={automaticActivity?.level}
@@ -278,6 +281,8 @@ export default function LearnerApp() {
       ) : (
         <LearnerDashboard
           learnerName={learnerName}
+          learnerGrade={learner.grade}
+          learnerSection={sectionLabel(learner.sectionId).split('·')[1]?.trim() ?? learner.sectionId}
           onLogout={handleExit}
           readingTitle={automaticActivity?.title}
           automaticLevel={automaticActivity?.level}

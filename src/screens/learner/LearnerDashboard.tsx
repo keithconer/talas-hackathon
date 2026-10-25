@@ -12,6 +12,8 @@ const DASHBOARD_ICONS = {
 
 interface Props {
   learnerName: string
+  learnerGrade: string
+  learnerSection: string
   onLogout: () => void
   onStartAssessment: () => void
   assessmentLocked?: boolean
@@ -107,6 +109,8 @@ function StatCard({
 
 export default function LearnerDashboard({
   learnerName,
+  learnerGrade,
+  learnerSection,
   onLogout,
   onStartAssessment,
   assessmentLocked = false,
@@ -188,7 +192,7 @@ export default function LearnerDashboard({
               fontWeight: 600,
             }}
           >
-            Baitang 2 · Sampaguita
+            {learnerGrade.replace(/^Grade\s+/i, 'Baitang ')} · {learnerSection}
           </span>
           <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
             <span style={{ fontFamily: FONT_UI, fontSize: '13px', color: 'var(--talas-charcoal)' }}>
