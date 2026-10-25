@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { getAll, syncNow, type ReadingAttempt, type PictureAttempt } from '../../../data'
+import { getAll, syncNow, type ReadingAttempt, type PictureAttempt, type SilentAttempt } from '../../../data'
 import { LEARNERS } from './sectionData'
 
 /** Only attempts belonging to a real roster learner are counted/shown. */
@@ -16,6 +16,8 @@ export interface SubmissionsIndex {
   pictureByLearner: Record<string, PictureAttempt[]>
   /** All live Salita at Larawan submissions across roster learners, newest first. */
   pictureAttempts: PictureAttempt[]
+  /** Silent-reading comprehension submissions, newest first. */
+  silentAttempts: SilentAttempt[]
 }
 
 const EMPTY: SubmissionsIndex = {
@@ -24,6 +26,7 @@ const EMPTY: SubmissionsIndex = {
   total: 0,
   pictureByLearner: {},
   pictureAttempts: [],
+  silentAttempts: [],
 }
 
 /**
@@ -41,9 +44,10 @@ export function useSubmissions(): SubmissionsIndex & { refresh: () => void } {
     let cancelled = false
 
     async function readLocal() {
-      const [allOral, allPicture] = await Promise.all([
+      const [allOral, allPicture, allSilent] = await Promise.all([
         getAll('readingAttempts'),
         getAll('pictureAttempts').catch(() => [] as PictureAttempt[]),
+        getAll('silentAttempts').catch(() => [] as SilentAttempt[]),
       ])
       if (cancelled) return
       // Keep only live attempts that belong to a real roster learner — this
@@ -64,12 +68,17 @@ export function useSubmissions(): SubmissionsIndex & { refresh: () => void } {
         ;(pictureByLearner[a.learnerId] ??= []).push(a)
       }
 
+      const silentAttempts = allSilent
+        .filter((a) => a.deleted !== true && ROSTER_IDS.has(a.learnerId))
+        .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1))
+
       setIndex({
         byLearner,
         submittedIds: new Set(Object.keys(byLearner)),
         total: liveOral.length,
         pictureByLearner,
         pictureAttempts: livePicture,
+        silentAttempts,
       })
     }
 

@@ -258,26 +258,6 @@ export default function SilentAssessment({ learnerId, onComplete }: Props) {
             </p>
           )}
 
-          {/* Listen button */}
-          <button
-            type="button"
-            onClick={() => {}}
-            style={{
-              border: '2px solid var(--talas-blue)',
-              background: 'transparent',
-              color: 'var(--talas-blue)',
-              borderRadius: '12px',
-              minHeight: '48px',
-              fontFamily: "'Inter', system-ui, sans-serif",
-              fontSize: '14px',
-              padding: '0 16px',
-              cursor: 'pointer',
-              marginTop: '12px',
-            }}
-          >
-            Pakinggan ang Kuwento
-          </button>
-
           {/* Word count badge */}
           <div
             style={{

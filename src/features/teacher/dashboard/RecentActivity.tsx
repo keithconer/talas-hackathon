@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom'
-import { ArrowRight, Image, Mic } from 'lucide-react'
+import { ArrowRight, BookOpen, Image, Mic } from 'lucide-react'
 import { useSubmissions } from './useSubmissions'
 import { LEARNERS } from './sectionData'
 import type { ReadingAttempt } from '../../../data'
+import { getActivity } from '../../../data/contentBank'
 
 function learnerName(id: string): string {
   return LEARNERS.find((l) => l.id === id)?.name ?? id
@@ -32,7 +33,7 @@ function toneForAccuracy(pct: number): string {
  */
 function RecentActivity() {
   const navigate = useNavigate()
-  const { byLearner, pictureAttempts, refresh } = useSubmissions()
+  const { byLearner, pictureAttempts, silentAttempts, refresh } = useSubmissions()
 
   // Flatten every learner's oral reading attempts, newest first, take the latest few.
   const feed: ReadingAttempt[] = Object.values(byLearner)
@@ -55,7 +56,7 @@ function RecentActivity() {
         </button>
       </div>
 
-      {feed.length === 0 && recentPictures.length === 0 ? (
+      {feed.length === 0 && recentPictures.length === 0 && silentAttempts.length === 0 ? (
         <div className="py-8 text-center">
           <p className="font-sans text-sm text-gray-500">No submissions yet.</p>
           <p className="font-sans text-xs text-gray-400 mt-1">
@@ -84,7 +85,7 @@ function RecentActivity() {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-2">
                           <span className="font-sans text-[11px] font-semibold uppercase tracking-wide text-charcoal">
-                            Oral Reading
+                            {getActivity(a.passageId)?.title ?? 'Pasalitang Pagbasa'}
                           </span>
                           <span className="font-sans text-xs text-gray-400 shrink-0">
                             {fmtTime(a.createdAt)}
@@ -100,6 +101,26 @@ function RecentActivity() {
                         >
                           {a.accuracy}% · {a.correctWords}/{a.totalWords}
                         </span>
+                      </div>
+                    </button>
+                  </li>
+                ))}
+              </ol>
+            </div>
+          )}
+
+          {silentAttempts.slice(0, 5).length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-gray-100">
+              <span className="font-sans text-xs font-bold uppercase tracking-wide text-gray-400">Silent Reading</span>
+              <ol className="flex flex-col gap-2">
+                {silentAttempts.slice(0, 5).map((attempt) => (
+                  <li key={attempt.id}>
+                    <button type="button" onClick={() => navigate(`/teacher/learners/${attempt.learnerId}/activities`)} className="group w-full flex items-center gap-2.5 p-2.5 rounded-lg bg-white border border-gray-100 hover:bg-gray-50 text-left transition-colors">
+                      <span className="w-8 h-8 rounded-md bg-gray-100 text-charcoal flex items-center justify-center shrink-0"><BookOpen className="w-4 h-4" aria-hidden /></span>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-2"><span className="font-sans text-[11px] font-semibold uppercase tracking-wide text-charcoal">Silent Reading</span><span className="font-sans text-xs text-gray-400 shrink-0">{fmtTime(attempt.createdAt)}</span></div>
+                        <p className="font-sans text-xs text-charcoal leading-snug mt-0.5"><span className="font-semibold group-hover:text-sprout-500">{learnerName(attempt.learnerId)}</span> · {attempt.title}</p>
+                        <span className="inline-flex items-center px-2 py-0.5 rounded-md font-sans text-[11px] font-medium mt-1 bg-sky-50 text-sky-500">{attempt.scorePercent}% · {attempt.correctAnswers}/{attempt.totalQuestions}</span>
                       </div>
                     </button>
                   </li>

@@ -2,9 +2,11 @@ import FrogMascot from '../../components/FrogMascot'
 import { Award, BookOpen, Check, Target, type LucideIcon } from 'lucide-react'
 import type { PracticeProfile } from '../../data/practiceData'
 import { activityRegistry } from '../../data/practiceData'
+import { useAssessmentAttempts } from '../../features/teacher/profile/useAssessmentAttempts'
 
 interface Props {
   learnerName: string
+  learnerId: string
   practiceProfile: PracticeProfile
   onBack: () => void
   onExit: () => void
@@ -22,13 +24,16 @@ interface Badge {
 
 export default function LearnerProfile({
   learnerName,
+  learnerId,
   practiceProfile,
   onBack,
   onExit,
 }: Props) {
   const displayName = learnerName.split(' ')[0] || learnerName || 'Mag-aaral'
+  const { oralAttempts, silentAttempts, pictureAttempts, interventionPlans } = useAssessmentAttempts(learnerId)
 
-  const completedCount = practiceProfile.completedActivityIds.length
+  const interventionCount = interventionPlans.flatMap((plan) => plan.activities).filter((activity) => Boolean(activity.result)).length
+  const completedCount = practiceProfile.completedActivityIds.length + oralAttempts.length + silentAttempts.length + pictureAttempts.length + interventionCount
   const scores = practiceProfile.recentScores
   const avgScore =
     scores.length > 0
@@ -38,16 +43,20 @@ export default function LearnerProfile({
   // Child-friendly badges derived from real practice data (no new scoring).
   const badges: Badge[] = [
     { icon: '/imgs/badges/first-step.svg', label: 'Unang Hakbang', earned: completedCount >= 1 },
-    { icon: '/imgs/badges/diligent-reader.svg', label: 'Masipag Magbasa', earned: completedCount >= 3 },
-    { icon: '/imgs/badges/reading-streak.svg', label: 'Sunod-sunod', earned: practiceProfile.consecutiveHighScores >= 2 },
-    { icon: '/imgs/badges/reading-star.svg', label: 'Bituin ng Pagbasa', earned: avgScore >= 80 },
+    { icon: '/imgs/badges/diligent-reader.svg', label: 'Masipag Magbasa', earned: false },
+    { icon: '/imgs/badges/reading-streak.svg', label: 'Sunod-sunod', earned: false },
+    { icon: '/imgs/badges/reading-star.svg', label: 'Bituin ng Pagbasa', earned: false },
   ]
   const earnedCount = badges.filter((b) => b.earned).length
 
   // Titles of the activities the learner has finished, from the registry.
-  const completedTitles = practiceProfile.completedActivityIds
-    .map((id) => activityRegistry.find((a) => a.id === id)?.title)
-    .filter((t): t is string => Boolean(t))
+  const completedTitles = [
+    ...oralAttempts.map((attempt) => `Pasalitang Pagbasa · ${new Date(attempt.createdAt).toLocaleDateString()}`),
+    ...silentAttempts.map((attempt) => `${attempt.title} · Tahimik na Pagbasa`),
+    ...pictureAttempts.map((attempt) => `${attempt.title} · ${attempt.scorePercent}%`),
+    ...interventionPlans.flatMap((plan) => plan.activities.filter((activity) => activity.result).map((activity) => activity.title)),
+    ...practiceProfile.completedActivityIds.map((id) => activityRegistry.find((a) => a.id === id)?.title).filter((title): title is string => Boolean(title)),
+  ].reverse()
 
   return (
     <div
@@ -100,23 +109,10 @@ export default function LearnerProfile({
           >
             TALAS
           </span>
-          <button
-            type="button"
-            onClick={onExit}
-            style={{
-              background: 'white',
-              color: 'var(--talas-muted)',
-              border: '1px solid var(--talas-blue-soft)',
-              borderRadius: '10px',
-              padding: '8px 16px',
-              fontFamily: FONT_UI,
-              fontSize: '13px',
-              fontWeight: 600,
-              cursor: 'pointer',
-            }}
-          >
-            Mag-logout
-          </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span aria-label={`Profile ni ${displayName}`} style={{ width: 38, height: 38, borderRadius: '50%', display: 'grid', placeItems: 'center', background: 'var(--talas-green)', color: 'white', fontFamily: FONT_UI, fontWeight: 700 }}>{displayName.slice(0, 2).toUpperCase()}</span>
+            <button type="button" onClick={onExit} style={{ background: 'white', color: 'var(--talas-muted)', border: '1px solid var(--talas-blue-soft)', borderRadius: '10px', padding: '8px 12px', fontFamily: FONT_UI, fontSize: '13px', fontWeight: 600, cursor: 'pointer' }}>Mag-logout</button>
+          </div>
         </div>
 
         {/* ───────── HERO: who am I ───────── */}

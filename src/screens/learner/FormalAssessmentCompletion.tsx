@@ -1,5 +1,4 @@
 import FrogMascot from '../../components/FrogMascot'
-import { mockAssignment } from '../../data/mockData'
 
 interface Props {
   learnerName: string
@@ -62,27 +61,6 @@ export default function FormalAssessmentCompletion({ learnerName, onDone }: Prop
         Naipadala na ang iyong pagbasa. Hintayin ang komento ng guro.
       </p>
 
-      {/* Audio button */}
-      <button
-        type="button"
-        onClick={() => {}}
-        style={{
-          border: '1px solid var(--talas-line)',
-          background: 'transparent',
-          color: 'var(--talas-blue)',
-          borderRadius: '14px',
-          minHeight: '48px',
-          fontFamily: "'Inter', system-ui, sans-serif",
-          fontSize: '14px',
-          padding: '0 20px',
-          cursor: 'pointer',
-          marginTop: '20px',
-          width: '100%',
-        }}
-      >
-        Pakinggan ang Bati ni Kokoy
-      </button>
-
       {/* Recently completed card */}
       <div
         style={{
@@ -115,7 +93,7 @@ export default function FormalAssessmentCompletion({ learnerName, onDone }: Prop
             color: 'var(--talas-charcoal)',
           }}
         >
-          {mockAssignment.title}
+          Pasalitang at Tahimik na Pagbasa
         </div>
         <div
           style={{
@@ -125,7 +103,7 @@ export default function FormalAssessmentCompletion({ learnerName, onDone }: Prop
             marginTop: '4px',
           }}
         >
-          {mockAssignment.level} · {mockAssignment.estimatedMinutes} minuto
+          Pagsusuri sa Pagbasa
         </div>
       </div>
 
@@ -158,24 +136,6 @@ export default function FormalAssessmentCompletion({ learnerName, onDone }: Prop
           Bumalik sa Bahay
         </button>
 
-        <button
-          type="button"
-          onClick={onDone}
-          style={{
-            width: '100%',
-            minHeight: '48px',
-            background: 'transparent',
-            color: 'var(--talas-green)',
-            border: '1px solid var(--talas-line)',
-            borderRadius: '16px',
-            fontFamily: "'Inter', system-ui, sans-serif",
-            fontSize: '14px',
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
-        >
-          Magpatuloy sa Libreng Pagsasanay
-        </button>
       </div>
 
     </div>

@@ -5,16 +5,16 @@ import './RoleSelector.css'
 const ROLE_CARDS = [
   {
     role: 'teacher',
-    title: 'Teacher',
+    title: 'Continue As Teacher',
     blurb: 'assign assessments, review learner work, and track progress',
-    action: 'Teacher',
+    action: 'Magpatuloy',
     to: '/teacher',
   },
   {
     role: 'student',
-    title: 'Student',
+    title: 'Continue As Student',
     blurb: 'complete your assigned work, practice, and grow your streak.',
-    action: 'Student',
+    action: 'Magpatuloy',
     to: '/learner/home',
   },
 ] as const
@@ -39,10 +39,8 @@ function RoleSelector() {
             <img src="/imgs/talas-blinking.gif" alt="TALAS frog mascot" />
           </picture>
           <h1>
-            <span>Teaching &amp; Learning,</span>
-            <span>
-              assessed with <strong>care.</strong>
-            </span>
+            <span>Bawat bata, may sariling</span>
+            <span>paraan ng pagkatuto.</span>
           </h1>
           <p>choose your role to get started with TALAS</p>
         </header>

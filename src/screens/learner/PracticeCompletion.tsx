@@ -6,6 +6,8 @@ interface Props {
   scorePercent: number
   onKeepPracticing: () => void
   onBackToDashboard: () => void
+  firstBadgeUnlocked?: boolean
+  onBadgeAcknowledged?: () => void
 }
 
 export default function PracticeCompletion({
@@ -13,6 +15,8 @@ export default function PracticeCompletion({
   scorePercent,
   onKeepPracticing,
   onBackToDashboard,
+  firstBadgeUnlocked = false,
+  onBadgeAcknowledged = () => {},
 }: Props) {
   // Determine encouragement text
   let encouragementText: string | null = null
@@ -131,6 +135,16 @@ export default function PracticeCompletion({
           Bumalik sa Dashboard
         </button>
       </div>
+      {firstBadgeUnlocked && (
+        <div role="dialog" aria-modal="true" aria-labelledby="first-practice-badge-title" style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'grid', placeItems: 'center', padding: 20, background: 'rgba(20,35,30,.5)' }}>
+          <div style={{ width: 'min(400px, 100%)', padding: 28, borderRadius: 20, background: 'white', textAlign: 'center' }}>
+            <div aria-hidden="true" style={{ fontSize: 52 }}>🏅</div>
+            <h2 id="first-practice-badge-title" style={{ fontFamily: "'Fredoka', system-ui, sans-serif", color: 'var(--talas-green)' }}>Na-unlock mo ang Unang Hakbang!</h2>
+            <p style={{ fontFamily: "'Inter', system-ui, sans-serif", color: 'var(--talas-charcoal)' }}>Naitala na ito sa iyong profile.</p>
+            <button type="button" onClick={onBadgeAcknowledged} style={{ minWidth: 140, minHeight: 46, border: 0, borderRadius: 12, background: 'var(--talas-green)', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Okay</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

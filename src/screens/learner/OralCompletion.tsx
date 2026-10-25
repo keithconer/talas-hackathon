@@ -6,9 +6,10 @@ import { accuracyEncouragement } from '../../reading/crla'
 interface Props {
   result: OralResult | null
   onContinue: () => void
+  firstBadgeUnlocked?: boolean
 }
 
-export default function OralCompletion({ result, onContinue }: Props) {
+export default function OralCompletion({ result, onContinue, firstBadgeUnlocked = false }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const [playTime, setPlayTime] = useState(0)
 
@@ -252,6 +253,16 @@ export default function OralCompletion({ result, onContinue }: Props) {
       >
         Magpatuloy →
       </button>
+      {firstBadgeUnlocked && (
+        <div role="dialog" aria-modal="true" aria-labelledby="first-badge-title" style={{ position: 'fixed', inset: 0, zIndex: 60, display: 'grid', placeItems: 'center', padding: 20, background: 'rgba(20,35,30,.5)' }}>
+          <div style={{ width: 'min(400px, 100%)', padding: 28, borderRadius: 20, background: 'white', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
+            <div aria-hidden="true" style={{ fontSize: 52 }}>🏅</div>
+            <h2 id="first-badge-title" style={{ fontFamily: "'Fredoka', system-ui, sans-serif", color: 'var(--talas-green)', margin: '8px 0' }}>Na-unlock mo ang Unang Hakbang!</h2>
+            <p style={{ fontFamily: "'Inter', system-ui, sans-serif", color: 'var(--talas-charcoal)' }}>Naitala na rin ito sa iyong profile.</p>
+            <button type="button" onClick={onContinue} style={{ minWidth: 140, minHeight: 46, border: 0, borderRadius: 12, background: 'var(--talas-green)', color: 'white', fontWeight: 700, cursor: 'pointer' }}>Magpatuloy</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

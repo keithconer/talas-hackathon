@@ -20,6 +20,8 @@ interface Props {
   plan: InterventionPlan
   initialActivityId?: string
   onPlanUpdated: (updated: InterventionPlan) => void
+  firstActivity?: boolean
+  onFirstActivityCompleted?: () => void
   onBack: () => void
 }
 
@@ -69,13 +71,13 @@ export default function LearnerInterventionScreen({
   plan,
   initialActivityId,
   onPlanUpdated,
+  firstActivity = false,
+  onFirstActivityCompleted,
   onBack,
 }: Props) {
   const firstUnfinished =
     plan.activities.find((a) => !a.result)?.id ?? plan.activities[0]?.id ?? ''
-  const [selectedActivityId, setSelectedActivityId] = useState<string>(
-    initialActivityId || firstUnfinished,
-  )
+  const [selectedActivityId, setSelectedActivityId] = useState<string>(firstUnfinished || initialActivityId || '')
   const [answersByActivity, setAnswersByActivity] = useState<
     Record<string, Record<string, string>>
   >(() => {
@@ -89,6 +91,8 @@ export default function LearnerInterventionScreen({
   })
   const [submitting, setSubmitting] = useState(false)
   const [justSubmittedId, setJustSubmittedId] = useState<string | null>(null)
+  const [showSubmitSuccess, setShowSubmitSuccess] = useState(false)
+  const [allPlanActivitiesDone, setAllPlanActivitiesDone] = useState(false)
 
   // Exact same HTMLAudioElement + Google Translate Filipino (tl) MP3 playback
   // pipeline used in Salita at Larawan (`PicturePractice.tsx`).
@@ -160,7 +164,7 @@ export default function LearnerInterventionScreen({
       : null
 
   const handleSelectChoice = (itemId: string, value: string) => {
-    if (!activeActivity) return
+    if (!activeActivity || activeActivity.result) return
     setAnswersByActivity((prev) => ({
       ...prev,
       [activeActivity.id]: {
@@ -198,7 +202,10 @@ export default function LearnerInterventionScreen({
 
       const saved = await putRecord(STORES.interventionPlans, updatedPlan)
       onPlanUpdated(saved)
+      onFirstActivityCompleted?.()
       setJustSubmittedId(activeActivity.id)
+      setAllPlanActivitiesDone(saved.activities.every((activity) => Boolean(activity.result)))
+      setShowSubmitSuccess(true)
 
       try {
         await syncNow()
@@ -403,6 +410,7 @@ export default function LearnerInterventionScreen({
               <button
                 key={act.id}
                 type="button"
+                disabled={Boolean(act.result) || act.id !== firstUnfinished}
                 onClick={() => {
                   playbackId.current += 1
                   audioRef.current?.pause()
@@ -418,7 +426,8 @@ export default function LearnerInterventionScreen({
                   border: '1px solid var(--talas-line)',
                   boxShadow: isSelected ? 'inset 0 0 0 1px var(--talas-green)' : 'none',
                   background: isSelected ? 'var(--talas-mint)' : 'white',
-                  cursor: 'pointer',
+                  cursor: Boolean(act.result) || act.id !== firstUnfinished ? 'default' : 'pointer',
+                  opacity: Boolean(act.result) || act.id !== firstUnfinished ? 0.68 : 1,
                   display: 'flex',
                   flexDirection: 'column',
                   gap: '6px',
@@ -1034,6 +1043,7 @@ export default function LearnerInterventionScreen({
                             <button
                               key={choice}
                               type="button"
+                              disabled={Boolean(activeActivity.result)}
                               onClick={() => handleSelectChoice(item.id, choice)}
                               style={{
                                 padding: '12px 16px',
@@ -1049,6 +1059,7 @@ export default function LearnerInterventionScreen({
                                 fontSize: '15px',
                                 fontWeight: isPicked ? 700 : 600,
                                 cursor: 'pointer',
+                                opacity: activeActivity.result ? 0.65 : 1,
                                 textAlign: 'left',
                               }}
                             >
@@ -1061,6 +1072,7 @@ export default function LearnerInterventionScreen({
                     ) : (
                       <input
                         type="text"
+                        disabled={Boolean(activeActivity.result)}
                         value={chosen}
                         onChange={(e) =>
                           handleSelectChoice(item.id, e.target.value)
@@ -1100,22 +1112,22 @@ export default function LearnerInterventionScreen({
 
             <button
               type="button"
-              disabled={!allQuestionsAnswered || submitting}
+              disabled={!allQuestionsAnswered || submitting || Boolean(activeActivity.result) || activeActivity.id !== firstUnfinished}
               onClick={() => void handleSubmitActivity()}
               style={{
                 minHeight: '54px',
                 padding: '0 28px',
                 borderRadius: '16px',
                 border: 'none',
-                background: allQuestionsAnswered
+                background: allQuestionsAnswered && !activeActivity.result && activeActivity.id === firstUnfinished
                   ? 'var(--talas-green)'
                   : 'var(--talas-line)',
                 color: 'white',
                 fontFamily: FONT_UI,
                 fontSize: '16px',
                 fontWeight: 700,
-                cursor: allQuestionsAnswered ? 'pointer' : 'not-allowed',
-                boxShadow: allQuestionsAnswered
+                cursor: allQuestionsAnswered && !activeActivity.result && activeActivity.id === firstUnfinished ? 'pointer' : 'not-allowed',
+                boxShadow: allQuestionsAnswered && !activeActivity.result && activeActivity.id === firstUnfinished
                   ? '0 8px 18px -10px rgba(3,83,253,0.45)'
                   : 'none',
               }}
@@ -1123,12 +1135,22 @@ export default function LearnerInterventionScreen({
               {submitting
                 ? 'Itinatala ang Iskor...'
                 : activeActivity.result
-                  ? 'I-update ang Sagot sa Interbensyon '
+                  ? 'Naipasa na ang Gawain'
                   : 'Ipasa ang Gawain sa Interbensyon '}
             </button>
           </div>
         </section>
       </div>
+      {showSubmitSuccess && (
+        <div role="dialog" aria-modal="true" aria-labelledby="intervention-success-title" style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(20, 35, 30, 0.45)', display: 'grid', placeItems: 'center', padding: 20 }}>
+          <div style={{ width: 'min(420px, 100%)', padding: 28, borderRadius: 20, background: 'white', textAlign: 'center', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
+            <div aria-hidden="true" style={{ fontSize: 48 }}>🎉</div>
+            <h2 id="intervention-success-title" style={{ fontFamily: FONT_DISPLAY, color: 'var(--talas-green)', fontSize: 24, margin: '8px 0' }}>{allPlanActivitiesDone ? 'Tapos na!' : firstActivity ? 'Na-unlock mo ang Unang Hakbang!' : 'Naipasa na!'}</h2>
+            <p style={{ fontFamily: FONT_READ, color: 'var(--talas-charcoal)', margin: '0 0 20px' }}>{allPlanActivitiesDone ? `${firstActivity ? 'Na-unlock mo ang Unang Hakbang! ' : ''}Pwede ka nang magpahinga.` : firstActivity ? 'Naitala ang iyong unang gawain at badge sa iyong profile.' : 'Naitala na ang iyong sagot. Sunod naman ang susunod na gawain.'}</p>
+            <button type="button" onClick={() => { setShowSubmitSuccess(false); if (allPlanActivitiesDone) onBack(); else { const next = plan.activities.find((act) => !act.result && act.id !== activeActivity.id); if (next) setSelectedActivityId(next.id) } }} style={{ minWidth: 140, minHeight: 46, border: 0, borderRadius: 12, background: 'var(--talas-green)', color: 'white', fontFamily: FONT_UI, fontWeight: 700, cursor: 'pointer' }}>Okay</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

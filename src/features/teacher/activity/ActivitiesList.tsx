@@ -4,6 +4,7 @@ import { useSubmissions } from '../dashboard/useSubmissions'
 import { LEARNERS } from '../dashboard/sectionData'
 import type { ReadingAttempt } from '../../../data'
 import Pagination from '../shared/Pagination'
+import { getActivity } from '../../../data/contentBank'
 
 const PAGE_SIZE = 8
 
@@ -31,7 +32,8 @@ function ActivitiesList() {
   const navigate = useNavigate()
   const [oralPage, setOralPage] = useState(1)
   const [picturePage, setPicturePage] = useState(1)
-  const { byLearner, pictureAttempts } = useSubmissions()
+  const [silentPage, setSilentPage] = useState(1)
+  const { byLearner, pictureAttempts, silentAttempts } = useSubmissions()
 
   const activities: ReadingAttempt[] = Object.values(byLearner)
     .flat()
@@ -41,13 +43,16 @@ function ActivitiesList() {
   const currentPicturePage = Math.min(picturePage, Math.max(1, Math.ceil(pictureAttempts.length / PAGE_SIZE)))
   const visibleActivities = activities.slice((currentOralPage - 1) * PAGE_SIZE, currentOralPage * PAGE_SIZE)
   const visiblePictureAttempts = pictureAttempts.slice((currentPicturePage - 1) * PAGE_SIZE, currentPicturePage * PAGE_SIZE)
+  const silentPageCount = Math.max(1, Math.ceil(silentAttempts.length / PAGE_SIZE))
+  const currentSilentPage = Math.min(silentPage, silentPageCount)
+  const visibleSilentAttempts = silentAttempts.slice((currentSilentPage - 1) * PAGE_SIZE, currentSilentPage * PAGE_SIZE)
 
   return (
     <div className="flex flex-col gap-4">
       <header className="flex flex-col gap-1">
         <h1 className="text-xl font-bold tracking-tight text-charcoal">Activities</h1>
         <p className="text-xs text-gray-500">
-          Recent learner activity submissions. Salita at Larawan results are kept separate from Oral & Silent reading grades.
+          Recent learner activity submissions, including oral reading, silent reading, and Salita at Larawan. Results stay grouped by activity type.
         </p>
       </header>
 
@@ -73,7 +78,7 @@ function ActivitiesList() {
                 className="flex items-center gap-3 rounded-lg border border-gray-100 px-3 py-2.5 text-left hover:bg-gray-50 transition-colors"
               >
                 <span className="flex flex-col min-w-0">
-                  <span className="text-[13px] font-medium truncate">Oral Reading</span>
+                  <span className="text-[13px] font-medium truncate">{getActivity(a.passageId)?.title ?? 'Pasalitang Pagbasa'}</span>
                   <span className="text-xs text-gray-500">
                     {learnerName(a.learnerId)} • {fmtTime(a.createdAt)} • {a.accuracy}%
                   </span>
@@ -86,6 +91,26 @@ function ActivitiesList() {
           </div>
         )}
         <Pagination total={activities.length} page={currentOralPage} pageSize={PAGE_SIZE} onPageChange={setOralPage} />
+      </section>
+
+      <section className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold tracking-tight text-charcoal">Silent Reading Submissions</h2>
+          <span className="text-xs font-semibold text-gray-500">{silentAttempts.length} submission{silentAttempts.length === 1 ? '' : 's'}</span>
+        </div>
+        {silentAttempts.length === 0 ? (
+          <div className="p-6 text-center"><p className="text-gray-500">No silent reading submissions yet.</p></div>
+        ) : (
+          <div className="flex flex-col gap-1 px-3">
+            {visibleSilentAttempts.map((attempt) => (
+              <button key={attempt.id} type="button" onClick={() => navigate(`/teacher/learners/${attempt.learnerId}/activities`)} className="flex items-center gap-3 rounded-lg border border-gray-100 px-3 py-2.5 text-left hover:bg-gray-50 transition-colors">
+                <span className="flex flex-col min-w-0"><span className="text-[13px] font-medium truncate">{attempt.title}</span><span className="text-xs text-gray-500">{learnerName(attempt.learnerId)} • {fmtTime(attempt.createdAt)} • {attempt.correctAnswers}/{attempt.totalQuestions}</span></span>
+                <span className="ml-auto px-2 py-0.5 rounded-md border border-gray-200 text-xs font-medium text-gray-600 shrink-0">{attempt.scorePercent}%</span>
+              </button>
+            ))}
+          </div>
+        )}
+        <Pagination total={silentAttempts.length} page={currentSilentPage} pageSize={PAGE_SIZE} onPageChange={setSilentPage} />
       </section>
 
       <section className="flex flex-col gap-2 rounded-xl border border-gray-200 bg-white">

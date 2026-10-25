@@ -12,7 +12,9 @@ const DASHBOARD_ICONS = {
 
 interface Props {
   learnerName: string
+  onLogout: () => void
   onStartAssessment: () => void
+  assessmentLocked?: boolean
   onStartPractice: () => void
   onStartPicturePractice: () => void
   onGoToProfile: () => void
@@ -105,9 +107,9 @@ function StatCard({
 
 export default function LearnerDashboard({
   learnerName,
+  onLogout,
   onStartAssessment,
-  onStartPractice,
-  onStartPicturePractice,
+  assessmentLocked = false,
   onGoToProfile,
   readingTitle,
   automaticLevel,
@@ -210,6 +212,9 @@ export default function LearnerDashboard({
             >
               {initials}
             </div>
+            <button type="button" onClick={onLogout} aria-label="Mag-logout" title="Mag-logout" style={{ border: '1px solid var(--talas-line)', borderRadius: '10px', background: 'white', color: 'var(--talas-muted)', padding: '8px 10px', fontFamily: FONT_UI, fontSize: '12px', fontWeight: 600, cursor: 'pointer' }}>
+              Mag-logout
+            </button>
           </div>
         </div>
 
@@ -422,6 +427,7 @@ export default function LearnerDashboard({
             <button
               type="button"
               onClick={onStartAssessment}
+              disabled={assessmentLocked}
               style={{
                 marginTop: 'auto',
                 width: '100%',
@@ -433,14 +439,15 @@ export default function LearnerDashboard({
                 fontFamily: FONT_UI,
                 fontSize: '14px',
                 fontWeight: 700,
-                cursor: 'pointer',
+                cursor: assessmentLocked ? 'not-allowed' : 'pointer',
+                opacity: assessmentLocked ? 0.65 : 1,
               }}
             >
-              Simulan Na!
+              {assessmentLocked ? 'Natapos na ang Pagsusuri' : 'Simulan Na!'}
             </button>
           </section>
 
-          {/* Keep practicing */}
+          {/* Teacher-assigned intervention plan */}
           <section
             style={{
               background: 'white',
@@ -453,214 +460,31 @@ export default function LearnerDashboard({
             }}
           >
             <div>
-              <div
-                style={{
-                  fontFamily: FONT_DISPLAY,
-                  fontSize: '20px',
-                  fontWeight: 700,
-                  color: 'var(--talas-charcoal)',
-                }}
-              >
-                Mga Laro sa Pagbasa
+              <div style={{ fontFamily: FONT_DISPLAY, fontSize: '20px', fontWeight: 700, color: 'var(--talas-charcoal)' }}>
+                Intervention Plans
+              </div>
+              <div style={{ fontFamily: FONT_READ, fontSize: '13px', color: 'var(--talas-muted)' }}>
+                Mga gawaing itinalaga ng iyong guro.
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={onStartPractice}
-              style={{
-                marginTop: 'auto',
-                width: '100%',
-                minHeight: '48px',
-                background: 'white',
-                color: 'var(--talas-green)',
-                border: '1px solid var(--talas-line)',
-                borderRadius: '10px',
-                fontFamily: FONT_UI,
-                fontSize: '14px',
-                fontWeight: 700,
-                cursor: 'pointer',
-              }}
-            >
-              Magsanay Tayo!
-            </button>
-            <button type="button" onClick={onStartPicturePractice} style={{ width: '100%', minHeight: 48, border: '1px solid var(--talas-line)', borderRadius: 10, background: 'white', color: 'var(--talas-charcoal)', fontFamily: FONT_UI, fontSize: 14, fontWeight: 600, cursor: 'pointer', padding: 12 }}>
-              Salita at Larawan
-            </button>
+            {interventionPlan && totalInterventionActivities > 0 ? (
+              <>
+                <span style={{ color: 'var(--talas-muted)', fontFamily: FONT_UI, fontSize: '12px', fontWeight: 700 }}>
+                  {completedInterventionActivities}/{totalInterventionActivities} natapos · {pendingInterventionActivities} natitira
+                </span>
+                {interventionPlan.activities.map((act) => (
+                  <button key={act.id} type="button" onClick={() => onStartIntervention?.(act.id)} style={{ width: '100%', minHeight: '42px', padding: '8px 12px', border: '1px solid var(--talas-line)', borderRadius: '10px', background: 'white', color: 'var(--talas-charcoal)', fontFamily: FONT_UI, fontSize: '13px', fontWeight: 600, cursor: 'pointer', textAlign: 'left' }}>
+                    {act.title} {act.result ? '· Natapos' : '· Simulan'}
+                  </button>
+                ))}
+              </>
+            ) : (
+              <div style={{ fontFamily: FONT_READ, fontSize: '14px', color: 'var(--talas-muted)', padding: '8px 0' }}>
+                Wala pang nakatalagang intervention plan.
+              </div>
+            )}
           </section>
         </div>
-
-        {/* ───────── DEDICATED INTERVENTION PLAN CARD (SEPARATE SCORING) ───────── */}
-        {interventionPlan && totalInterventionActivities > 0 && (
-          <section
-            style={{
-              background: 'white',
-              borderRadius: '14px',
-              border: '1px solid var(--talas-line)',
-              padding: '18px',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '16px',
-            }}
-          >
-            <div
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                gap: '12px',
-                flexWrap: 'wrap',
-              }}
-            >
-              <div>
-                <span
-                  style={{
-                    fontFamily: FONT_UI,
-                    fontSize: '12px',
-                    fontWeight: 700,
-                    textTransform: 'uppercase',
-                    letterSpacing: '0.08em',
-                    color: 'var(--talas-muted)',
-                  }}
-                >
-                   Plano ng Interbensyon sa Pagbasa (Baitang {interventionPlan.gradeLevel})
-                </span>
-                <div
-                  style={{
-                    fontFamily: FONT_DISPLAY,
-                    fontSize: '20px',
-                    fontWeight: 700,
-                    color: 'var(--talas-charcoal)',
-                    marginTop: '2px',
-                  }}
-                >
-                  Mga Karagdagang Pagsasanay mula sa Guro
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span
-                  style={{
-                    color: 'var(--talas-muted)',
-                    fontFamily: FONT_UI,
-                    fontSize: '12px',
-                    fontWeight: 700,
-                  }}
-                >
-                  Hiwalay na Iskor:{' '}
-                  {interventionAveragePercent !== null
-                    ? `${interventionAveragePercent}%`
-                    : 'Wala pang iskor'}
-                </span>
-                <span
-                  style={{
-                    color: 'var(--talas-muted)',
-                    fontFamily: FONT_UI,
-                    fontSize: '12px',
-                    fontWeight: 700,
-                  }}
-                >
-                  {completedInterventionActivities}/{totalInterventionActivities} Natapos
-                </span>
-              </div>
-            </div>
-
-            <div
-              style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '12px',
-              }}
-            >
-              {interventionPlan.activities.map((act) => {
-                const pct =
-                  act.result && act.result.maxScore > 0
-                    ? Math.round(
-                        (act.result.finalScore / act.result.maxScore) * 100,
-                      )
-                    : null
-                return (
-                  <div
-                    key={act.id}
-                    style={{
-                      background: 'white',
-                      border: '1px solid var(--talas-line)',
-                      borderRadius: '16px',
-                      padding: '14px',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      gap: '8px',
-                    }}
-                  >
-                    <div
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        gap: '6px',
-                      }}
-                    >
-                      <span
-                        style={{
-                          fontFamily: FONT_UI,
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          color: 'var(--talas-muted)',
-                        }}
-                      >
-                        {act.category}
-                      </span>
-                      <span
-                        style={{
-                          fontFamily: FONT_UI,
-                          fontSize: '11px',
-                          fontWeight: 700,
-                          padding: '2px 8px',
-                          borderRadius: '10px',
-                          color: 'var(--talas-muted)',
-                        }}
-                      >
-                        {act.result
-                          ? `Iskor: ${act.result.finalScore}/${act.result.maxScore} (${pct}%)`
-                          : 'Naghihintay'}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        fontFamily: FONT_DISPLAY,
-                        fontSize: '15px',
-                        fontWeight: 700,
-                        color: 'var(--talas-charcoal)',
-                      }}
-                    >
-                      {act.title}
-                    </div>
-                    {onStartIntervention && (
-                      <button
-                        type="button"
-                        onClick={() => onStartIntervention(act.id)}
-                        style={{
-                          marginTop: 'auto',
-                          padding: '8px 12px',
-                          borderRadius: '10px',
-                          border: '1px solid var(--talas-line)',
-                          background: 'white',
-                          color: 'var(--talas-charcoal)',
-                          fontFamily: FONT_UI,
-                          fontSize: '12px',
-                          fontWeight: 700,
-                          cursor: 'pointer',
-                        }}
-                      >
-                        {act.result ? 'Balikan ang Gawain →' : 'Simulan ang Gawain →'}
-                      </button>
-                    )}
-                  </div>
-                )
-              })}
-            </div>
-          </section>
-        )}
 
         {/* ───────── PROFILE CARD ───────── */}
         <button

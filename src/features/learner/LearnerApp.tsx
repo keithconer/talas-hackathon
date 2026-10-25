@@ -26,6 +26,9 @@ import type { OralResult } from '../../screens/learner/OralAssessment'
 import {
   listInterventionPlansByLearner,
   listReadingAttemptsByLearner,
+  listSilentAttemptsByLearner,
+  listPictureAttemptsByLearner,
+  listAssignmentsByLearner,
   syncNow,
   type InterventionPlan,
 } from '../../data'
@@ -68,6 +71,7 @@ export default function LearnerApp() {
     consecutiveLowScores: 0,
     completedActivityIds: [],
   })
+  const [practiceProfileReadyFor, setPracticeProfileReadyFor] = useState<string | null>(null)
   const [activeActivityId, setActiveActivityId] = useState<string>('')
   const [lastActivityTitle, setLastActivityTitle] = useState<string>('')
   const [lastScorePercent, setLastScorePercent] = useState<number>(0)
@@ -79,11 +83,37 @@ export default function LearnerApp() {
   // oral-reading accuracy. No teacher assignment is required.
   const [automaticActivity, setAutomaticActivity] = useState<BankActivity | null>(null)
   const [bestAccuracy, setBestAccuracy] = useState<number | null>(null)
+  const [formalAssessmentLocked, setFormalAssessmentLocked] = useState(false)
+  const [teacherAssignedAssessment, setTeacherAssignedAssessment] = useState(false)
+  const [firstBadgeUnlocked, setFirstBadgeUnlocked] = useState(false)
+  const [hasAnyCompletedActivity, setHasAnyCompletedActivity] = useState(false)
 
   // Separate Reading Intervention Plan state (never overwrites regular tasks or scores)
   const [interventionPlan, setInterventionPlan] = useState<InterventionPlan | null>(null)
   const [selectedInterventionActivityId, setSelectedInterventionActivityId] =
     useState<string | undefined>(undefined)
+
+  useEffect(() => {
+    if (!learner) return
+    setPracticeProfileReadyFor(null)
+    const key = `talas-practice-profile:${learner.id}`
+    try {
+      const saved = localStorage.getItem(key)
+      if (saved) setPracticeProfile(JSON.parse(saved) as PracticeProfile)
+    } catch {
+      /* Keep the in-memory default if local storage is unavailable. */
+    }
+    setPracticeProfileReadyFor(learner.id)
+  }, [learner])
+
+  useEffect(() => {
+    if (!learner || practiceProfileReadyFor !== learner.id) return
+    try {
+      localStorage.setItem(`talas-practice-profile:${learner.id}`, JSON.stringify(practiceProfile))
+    } catch {
+      /* Profile history remains available for this session. */
+    }
+  }, [learner, practiceProfile, practiceProfileReadyFor])
 
   // On login, sync and inspect the learner's prior readings + any assigned
   // Reading Intervention Plan. Regular tasks remain untouched.
@@ -95,6 +125,10 @@ export default function LearnerApp() {
           setAutomaticActivity(null)
           setBestAccuracy(null)
           setInterventionPlan(null)
+          setFormalAssessmentLocked(false)
+          setTeacherAssignedAssessment(false)
+          setHasAnyCompletedActivity(false)
+          setFirstBadgeUnlocked(false)
         }
         return
       }
@@ -103,10 +137,21 @@ export default function LearnerApp() {
       } catch {
         /* offline — use locally stored attempts & plans */
       }
-      const [attempts, plans] = await Promise.all([
+      const [attempts, plans, silentAttempts, assignments, pictureAttempts] = await Promise.all([
         listReadingAttemptsByLearner(learner.id),
         listInterventionPlansByLearner(learner.id),
+        listSilentAttemptsByLearner(learner.id),
+        listAssignmentsByLearner(learner.id),
+        listPictureAttemptsByLearner(learner.id),
       ])
+      let hasSavedPractice = false
+      try {
+        const savedPractice = localStorage.getItem(`talas-practice-profile:${learner.id}`)
+        hasSavedPractice = Boolean(savedPractice && (JSON.parse(savedPractice) as PracticeProfile).completedActivityIds.length)
+      } catch { /* Ignore unavailable or invalid local profile data. */ }
+      const hasPreviousActivity = hasSavedPractice || attempts.length + silentAttempts.length + pictureAttempts.length + plans.flatMap((plan) => plan.activities).filter((act) => Boolean(act.result)).length > 0
+      const hasSubmittedFormal = attempts.length > 0 || silentAttempts.some((attempt) => attempt.assessmentId === 'silent-ang-batang-magsasaka-v1')
+      const hasTeacherAssignment = assignments.some((assignment) => assignment.assessmentId === 'silent-ang-batang-magsasaka-v1' && (assignment.status === 'assigned' || assignment.status === 'in-progress'))
       const best =
         attempts.length > 0
           ? Math.max(...attempts.map((a) => a.accuracy))
@@ -121,6 +166,9 @@ export default function LearnerApp() {
         plans[0] ??
         null
       setInterventionPlan(activePlan)
+      setHasAnyCompletedActivity(hasPreviousActivity)
+      setFormalAssessmentLocked(hasSubmittedFormal && !hasTeacherAssignment)
+      setTeacherAssignedAssessment(hasTeacherAssignment)
 
       setBestAccuracy(best)
       if (best == null) {
@@ -154,6 +202,8 @@ export default function LearnerApp() {
       activeActivityId,
     )
     setPracticeProfile(updated)
+    if (!hasAnyCompletedActivity) setFirstBadgeUnlocked(true)
+    setHasAnyCompletedActivity(true)
     setLastScorePercent(scorePercent)
     setCurrentScreen('practice-completion')
   }
@@ -161,6 +211,8 @@ export default function LearnerApp() {
   // Salita at Larawan completion is recorded separately in `pictureAttempts`
   // and does not alter the learner's oral/silent reading practice profile.
   const handlePicturePracticeComplete = (scorePercent: number) => {
+    if (!hasAnyCompletedActivity) setFirstBadgeUnlocked(true)
+    setHasAnyCompletedActivity(true)
     setLastScorePercent(scorePercent)
     setCurrentScreen('practice-completion')
   }
@@ -189,6 +241,7 @@ export default function LearnerApp() {
       return (
         <LearnerDashboard
           learnerName={learnerName}
+          onLogout={handleExit}
           readingTitle={automaticActivity?.title}
           automaticLevel={automaticActivity?.level}
           interventionPlan={interventionPlan}
@@ -196,7 +249,8 @@ export default function LearnerApp() {
             setSelectedInterventionActivityId(activityId)
             setCurrentScreen('intervention-activity')
           }}
-          onStartAssessment={() => setCurrentScreen('oral-assessment')}
+          onStartAssessment={() => { if (!formalAssessmentLocked) setCurrentScreen('oral-assessment') }}
+          assessmentLocked={formalAssessmentLocked}
           onStartPractice={handleStartPractice}
           onStartPicturePractice={() => {
             setActiveActivityId('picture-word-practice')
@@ -212,6 +266,11 @@ export default function LearnerApp() {
           learnerId={learner.id}
           learnerName={learnerName}
           plan={interventionPlan}
+          firstActivity={!hasAnyCompletedActivity}
+          onFirstActivityCompleted={() => {
+            if (!hasAnyCompletedActivity) setFirstBadgeUnlocked(true)
+            setHasAnyCompletedActivity(true)
+          }}
           initialActivityId={selectedInterventionActivityId}
           onPlanUpdated={(updated) => setInterventionPlan(updated)}
           onBack={() => setCurrentScreen('dashboard')}
@@ -219,9 +278,11 @@ export default function LearnerApp() {
       ) : (
         <LearnerDashboard
           learnerName={learnerName}
+          onLogout={handleExit}
           readingTitle={automaticActivity?.title}
           automaticLevel={automaticActivity?.level}
-          onStartAssessment={() => setCurrentScreen('oral-assessment')}
+          onStartAssessment={() => { if (!formalAssessmentLocked) setCurrentScreen('oral-assessment') }}
+          assessmentLocked={formalAssessmentLocked}
           onStartPractice={handleStartPractice}
           onStartPicturePractice={() => {
             setActiveActivityId('picture-word-practice')
@@ -241,6 +302,9 @@ export default function LearnerApp() {
           onSubmit={(result) => {
             setOralResult(result)
             setOralResultForView(result)
+            setFormalAssessmentLocked(!teacherAssignedAssessment)
+            if (!hasAnyCompletedActivity) setFirstBadgeUnlocked(true)
+            setHasAnyCompletedActivity(true)
 
             // Recalculate immediately after every reading. The best result is
             // retained as the formal CRLA basis, and its accuracy determines
@@ -258,7 +322,8 @@ export default function LearnerApp() {
       return (
         <OralCompletion
           result={oralResultForView}
-          onContinue={() => setCurrentScreen('silent-assessment')}
+          firstBadgeUnlocked={firstBadgeUnlocked}
+          onContinue={() => { setFirstBadgeUnlocked(false); setCurrentScreen('silent-assessment') }}
         />
       )
     case 'silent-assessment':
@@ -272,7 +337,7 @@ export default function LearnerApp() {
       return (
         <FormalAssessmentCompletion
           learnerName={learnerName}
-          onDone={handleExit}
+          onDone={() => setCurrentScreen('dashboard')}
         />
       )
     case 'picture-practice':
@@ -298,6 +363,8 @@ export default function LearnerApp() {
           learnerName={learnerName}
           activityTitle={lastActivityTitle}
           scorePercent={lastScorePercent}
+          firstBadgeUnlocked={firstBadgeUnlocked}
+          onBadgeAcknowledged={() => setFirstBadgeUnlocked(false)}
           onKeepPracticing={activeActivityId === 'picture-word-practice' ? () => setCurrentScreen('picture-practice') : handleKeepPracticing}
           onBackToDashboard={() => setCurrentScreen('dashboard')}
         />
@@ -306,6 +373,7 @@ export default function LearnerApp() {
       return (
         <LearnerProfile
           learnerName={learnerName}
+          learnerId={learner.id}
           practiceProfile={practiceProfile}
           onBack={() => setCurrentScreen('dashboard')}
           onExit={handleExit}
