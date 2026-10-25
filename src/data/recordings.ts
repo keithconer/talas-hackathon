@@ -99,3 +99,28 @@ export async function getRecordingUrl(key: string): Promise<string> {
   }
   return requestPresign({ action: "presign-download", key });
 }
+
+/**
+ * Uses the Lambda's server-side OpenAI transcription pass for a completed
+ * recording. The API key never reaches the browser. Callers should retain
+ * their live/offline transcript when this optional enhancement is unavailable.
+ */
+export async function transcribeRecording(
+  key: string,
+  passage: string,
+): Promise<string> {
+  if (!SYNC_URL.trim()) throw new Error("Transcription endpoint not configured.");
+  const response = await fetch(SYNC_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "transcribe-recording", key, passage }),
+  });
+  const body = (await response.json().catch(() => ({}))) as {
+    transcript?: string;
+    error?: string;
+  };
+  if (!response.ok || !body.transcript?.trim()) {
+    throw new Error(body.error || `Transcription failed: HTTP ${response.status}`);
+  }
+  return body.transcript.trim();
+}

@@ -13,6 +13,7 @@ import {
   syncNow,
   uploadRecording,
   isRecordingStorageConfigured,
+  transcribeRecording,
   type WordResult,
 } from '../../data'
 
@@ -58,6 +59,42 @@ function estimateTime(i: number, total: number, dur: number): number | undefined
   return (i / total) * dur
 }
 
+/** Transfers live word timings to the cloud-corrected transcript using LCS. */
+function alignTranscriptTimes(
+  original: string,
+  corrected: string,
+  timings: ReturnType<ReturnType<typeof useSpeechRecognition>['getWordTimings']>,
+  durationSec: number,
+): Array<number | undefined> {
+  const oldWords = tokenize(original).map((word, index) => ({ word: word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, ''), index })).filter((x) => x.word)
+  const newWords = tokenize(corrected).map((word) => word.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')).filter(Boolean)
+  const table = Array.from({ length: oldWords.length + 1 }, () => new Array<number>(newWords.length + 1).fill(0))
+  for (let i = oldWords.length - 1; i >= 0; i--) {
+    for (let j = newWords.length - 1; j >= 0; j--) {
+      table[i][j] = oldWords[i].word === newWords[j]
+        ? table[i + 1][j + 1] + 1
+        : Math.max(table[i + 1][j], table[i][j + 1])
+    }
+  }
+  const matches = new Map<number, number>()
+  let i = 0
+  let j = 0
+  while (i < oldWords.length && j < newWords.length) {
+    if (oldWords[i].word === newWords[j]) {
+      matches.set(j, oldWords[i].index)
+      i++
+      j++
+    } else if (table[i + 1][j] >= table[i][j + 1]) i++
+    else j++
+  }
+  return newWords.map((_, index) => {
+    const oldIndex = matches.get(index)
+    return oldIndex == null
+      ? estimateTime(index, newWords.length, durationSec)
+      : timings[oldIndex]?.start ?? estimateTime(index, newWords.length, durationSec)
+  })
+}
+
 export default function OralAssessment({
   onBack,
   onSubmit,
@@ -74,6 +111,7 @@ export default function OralAssessment({
 
   const speech = useSpeechRecognition('fil-PH')
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0)
+  const [isSubmitting, setIsSubmitting] = useState(false)
   const finishingRef = useRef(false)
   // Ensures the attempt is persisted at most once per reading.
   const submittedRef = useRef(false)
@@ -123,7 +161,7 @@ export default function OralAssessment({
 
   // Persist the attempt to IndexedDB (offline-safe, syncs when online).
   const persist = useCallback(
-    async (result: OralResult) => {
+    async (result: OralResult): Promise<OralResult> => {
       const attemptId = `attempt-${PASSAGE_ID}-${Date.now()}`
 
       // Upload the voice recording to S3 first (best-effort). If online and
@@ -131,10 +169,39 @@ export default function OralAssessment({
       // the teacher can play it back later. If it fails (offline, no endpoint),
       // we still save everything else.
       let audioKey: string | undefined
+      let finalResult = result
       const blob = speech.getAudioBlob()
       if (blob && navigator.onLine && isRecordingStorageConfigured()) {
         try {
           audioKey = await uploadRecording(blob, learnerId, attemptId)
+          // Improve the final transcript online with a passage-aware model.
+          // Vosk/Web Speech remains the live guide and offline fallback.
+          try {
+            const correctedTranscript = await transcribeRecording(audioKey, result.passage)
+            const score = scoreReading(result.passage, correctedTranscript)
+            const alignedTimes = alignTranscriptTimes(
+              result.transcript,
+              correctedTranscript,
+              speech.getWordTimings(),
+              result.durationSec,
+            )
+            finalResult = {
+              ...result,
+              transcript: correctedTranscript,
+              accuracy: score.accuracy,
+              correctWords: score.correctWords,
+              totalWords: score.totalWords,
+              words: score.words.map((word) => ({
+                ...word,
+                timeSec: word.spokenIndex == null
+                  ? undefined
+                  : alignedTimes[word.spokenIndex] ?? estimateTime(word.index, score.totalWords, result.durationSec),
+              })),
+              engine: 'openai-transcribe',
+            }
+          } catch (error) {
+            console.warn('[TALAS] Cloud transcription unavailable; keeping live transcript.', error)
+          }
         } catch {
           /* upload failed; attempt still saves without the recording key */
         }
@@ -145,11 +212,11 @@ export default function OralAssessment({
           id: attemptId,
           passageId: PASSAGE_ID,
           learnerId,
-          transcript: result.transcript,
-          accuracy: result.accuracy,
-          correctWords: result.correctWords,
-          totalWords: result.totalWords,
-          words: result.words,
+          transcript: finalResult.transcript,
+          accuracy: finalResult.accuracy,
+          correctWords: finalResult.correctWords,
+          totalWords: finalResult.totalWords,
+          words: finalResult.words,
           method: result.engine === 'none' ? 'manual' : 'speech-api',
           online: navigator.onLine,
           durationSec: result.durationSec || undefined,
@@ -164,6 +231,7 @@ export default function OralAssessment({
         // Surface the real cause instead of silently losing the attempt.
         console.error('[TALAS] Failed to save reading attempt:', err)
       }
+      return finalResult
     },
     [PASSAGE_ID, speech, learnerId],
   )
@@ -215,10 +283,15 @@ export default function OralAssessment({
     // Guard against double-submits (fast double-tap, re-render) saving twice.
     if (submittedRef.current) return
     submittedRef.current = true
-    const transcript = speech.transcript
-    const result = buildResult(transcript)
-    await persist(result)
-    onSubmit(result)
+    setIsSubmitting(true)
+    try {
+      const transcript = speech.transcript
+      const result = buildResult(transcript)
+      const improvedResult = await persist(result)
+      onSubmit(improvedResult)
+    } finally {
+      setIsSubmitting(false)
+    }
   }
 
   const showControls = isRecording || hasStopped || speech.status === 'loading'
@@ -695,21 +768,21 @@ export default function OralAssessment({
             {/* Ipasa */}
             <button
               type="button"
-              disabled={!hasStopped}
+              disabled={!hasStopped || isSubmitting}
               onClick={() => void handleSubmit()}
               style={{
-                background: hasStopped ? 'var(--talas-blue)' : '#E5E7EB',
-                color: hasStopped ? 'white' : '#6B7280',
+                background: hasStopped && !isSubmitting ? 'var(--talas-blue)' : '#E5E7EB',
+                color: hasStopped && !isSubmitting ? 'white' : '#6B7280',
                 border: 'none',
                 borderRadius: '12px',
                 minHeight: '52px',
                 fontFamily: 'var(--font-ui)',
                 fontSize: '14px',
                 fontWeight: 700,
-                cursor: hasStopped ? 'pointer' : 'not-allowed',
+                cursor: hasStopped && !isSubmitting ? 'pointer' : 'not-allowed',
               }}
             >
-              Ipasa →
+              {isSubmitting ? 'Pinapahusay ang transcript…' : 'Ipasa →'}
             </button>
           </div>
         )}

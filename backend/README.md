@@ -39,9 +39,10 @@ there. Each item:
    ```
 2. **Upload**: Lambda Console → `talasFunction` → **Code** tab → **Upload from → .zip file** → pick `talasFunction.zip`.
 3. **Runtime/handler**: set runtime to **Node.js 20.x** (or newer) and the handler to **`index.handler`**.
-4. **Permissions**: Configuration → **Permissions** → open the execution role → attach a policy granting DynamoDB access to the `talas` table (see below).
-5. **Timeout**: Configuration → General → bump timeout to ~10s (the default 3s is tight for a cold start + scan).
-6. **Function URL**: Configuration → **Function URL** → Create → **Auth type: NONE** → enable **CORS** (origin `*`, method `POST`, header `content-type`). Copy the URL.
+4. **Optional Filipino transcription enhancement**: add `OPENAI_API_KEY` to the Lambda environment. The oral reading flow sends its S3 recording to OpenAI `gpt-transcribe` through Lambda; the key stays server-side. If this variable or the service is unavailable, the existing live/offline transcript is retained. Grant the Lambda role `s3:GetObject` access to `arn:aws:s3:::talas-recordings/recordings/*`.
+5. **Permissions**: Configuration → **Permissions** → open the execution role → attach a policy granting DynamoDB access to the `talas` table and the S3 permission above.
+6. **Timeout**: Increase the Lambda timeout for transcription requests (60–90 seconds); audio transcription takes longer than sync calls.
+7. **Function URL**: Configuration → **Function URL** → Create → **Auth type: NONE** → enable **CORS** (origin `*`, method `POST`, header `content-type`). Copy the URL.
 
 ## Deploy (CLI alternative)
 
@@ -49,7 +50,7 @@ there. Each item:
 npm install
 Compress-Archive -Path index.mjs,package.json,node_modules -DestinationPath talasFunction.zip -Force
 aws lambda update-function-code --function-name talasFunction --zip-file fileb://talasFunction.zip --region ap-southeast-2
-aws lambda update-function-configuration --function-name talasFunction --handler index.handler --runtime nodejs20.x --timeout 10 --region ap-southeast-2
+aws lambda update-function-configuration --function-name talasFunction --handler index.handler --runtime nodejs20.x --timeout 90 --region ap-southeast-2
 ```
 
 ## IAM policy (attach to the Lambda execution role)
@@ -64,6 +65,11 @@ Replace the account id if different.
       "Effect": "Allow",
       "Action": ["dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:Scan"],
       "Resource": "arn:aws:dynamodb:ap-southeast-2:467590375048:table/talas"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject"],
+      "Resource": "arn:aws:s3:::talas-recordings/recordings/*"
     }
   ]
 }

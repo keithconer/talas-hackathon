@@ -53,6 +53,46 @@ async function presign(mode, key, contentType) {
   return getSignedUrl(s3, command, { expiresIn: PRESIGN_EXPIRY });
 }
 
+/** Server-side, context-aware Tagalog transcription of a submitted reading. */
+async function transcribeRecording(key, passage) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error("OPENAI_API_KEY is not configured in Lambda environment variables.");
+  if (typeof key !== "string" || !/^recordings\/[A-Za-z0-9_-]+\/[A-Za-z0-9_.-]+$/.test(key)) {
+    throw new Error("Invalid recording key.");
+  }
+  if (typeof passage !== "string" || passage.trim().length === 0 || passage.length > 12000) {
+    throw new Error("Missing or invalid reading passage.");
+  }
+
+  const stored = await s3.send(new GetObjectCommand({ Bucket: RECORDINGS_BUCKET, Key: key }));
+  if (stored.ContentLength > 25 * 1024 * 1024) throw new Error("The recording exceeds the transcription size limit.");
+  const bytes = await stored.Body?.transformToByteArray();
+  if (!bytes?.byteLength) throw new Error("The recording is empty or unavailable.");
+  if (bytes.byteLength > 25 * 1024 * 1024) throw new Error("The recording exceeds the transcription size limit.");
+
+  const form = new FormData();
+  const contentType = stored.ContentType || "audio/webm";
+  const extension = contentType.includes("mp4") ? "m4a" : contentType.includes("ogg") ? "ogg" : "webm";
+  form.append("file", new Blob([bytes], { type: contentType }), `reading.${extension}`);
+  form.append("model", "gpt-transcribe");
+  form.append("prompt", `Filipino/Tagalog child reading aloud. Transcribe only words actually spoken; do not fill in omitted words. Use this passage only to resolve the spelling of words: ${passage.slice(0, 8000)}`);
+
+  const response = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form,
+  });
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    console.error("[talasFunction] OpenAI transcription error:", response.status, result?.error?.message ?? "");
+    throw new Error(`OpenAI transcription failed (HTTP ${response.status}).`);
+  }
+  if (typeof result?.text !== "string" || !result.text.trim()) {
+    throw new Error("OpenAI returned an empty transcription.");
+  }
+  return result.text.trim();
+}
+
 const JSON_HEADERS = {
   "Content-Type": "application/json",
 };
@@ -226,6 +266,17 @@ export const handler = async (event) => {
     } catch (err) {
       console.error("[talasFunction] presign error:", err);
       return reply(400, { error: err.message ?? "Presign failed." });
+    }
+  }
+
+  // ── Optional context-aware speech transcription ──
+  if (body?.action === "transcribe-recording") {
+    try {
+      const transcript = await transcribeRecording(body.key, body.passage);
+      return reply(200, { transcript, model: "gpt-transcribe" });
+    } catch (err) {
+      console.error("[talasFunction] transcription error:", err);
+      return reply(502, { error: err.message ?? "Transcription failed." });
     }
   }
 

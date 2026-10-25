@@ -346,7 +346,18 @@ export function useSpeechRecognition(
     }
 
     if (recorderRef.current && recorderRef.current.state !== "inactive") {
-      recorderRef.current.stop();
+      // Wait for MediaRecorder's final dataavailable/onstop events so the
+      // completed Blob is ready before the learner submits the reading.
+      await new Promise<void>((resolve) => {
+        const recorder = recorderRef.current;
+        if (!recorder) return resolve();
+        const timeout = window.setTimeout(resolve, 2000);
+        recorder.addEventListener("stop", () => {
+          window.clearTimeout(timeout);
+          resolve();
+        }, { once: true });
+        recorder.stop();
+      });
     }
     cleanupStream();
     setStatus("done");
