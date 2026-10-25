@@ -1,0 +1,54 @@
+.talas-splash {
+  position: fixed;
+  z-index: 9999;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #fff;
+  animation:
+    talas-splash-color 1.2s ease-in-out forwards,
+    talas-splash-exit 0.5s ease-in 2s forwards;
+}
+
+.talas-splash img {
+  display: block;
+  width: clamp(120px, 24vw, 190px);
+  height: auto;
+  opacity: 0;
+  transform: scale(0.82);
+  animation: talas-logo-arrive 0.65s cubic-bezier(0.2, 0.75, 0.25, 1) 1s forwards;
+}
+
+@keyframes talas-splash-color {
+  0%, 18% {
+    background-color: #2787e8;
+  }
+  72%, 100% {
+    background-color: #fff;
+  }
+}
+
+@keyframes talas-logo-arrive {
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes talas-splash-exit {
+  to {
+    opacity: 0;
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .talas-splash {
+    animation: talas-splash-color 0.75s linear forwards;
+  }
+
+  .talas-splash img {
+    animation: talas-logo-arrive 0.25s ease-out 0.35s forwards;
+  }
+}
