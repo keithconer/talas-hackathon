@@ -1,0 +1,72 @@
+.add-learner {
+  max-width: 1100px;
+  margin: 0 auto 8px;
+  padding: 16px 24px;
+}
+
+.add-learner h2 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+.al-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.al-input {
+  flex: 1 1 180px;
+  min-width: 140px;
+  padding: 9px 12px;
+  font-size: 14px;
+  color: var(--talas-black);
+  background: #fff;
+  border: 1px solid #cbd2d9;
+  border-radius: 8px;
+}
+
+.al-input:focus {
+  outline: none;
+  border-color: var(--talas-blue);
+  box-shadow: 0 0 0 3px rgba(3, 83, 253, 0.18);
+}
+
+.al-btn {
+  flex: 0 0 auto;
+  padding: 9px 20px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--talas-blue);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.al-btn:hover:not(:disabled) {
+  background: var(--talas-blue-dark);
+}
+
+.al-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.al-status {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--talas-muted);
+  min-height: 18px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .al-input {
+    color: #e4e7eb;
+    background: #1f242b;
+    border-color: #3a4452;
+  }
+  .al-status {
+    color: var(--talas-muted);
+  }
+}

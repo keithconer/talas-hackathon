@@ -1,0 +1,151 @@
+.data-viewer {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 72px 24px 48px;
+  font-family: var(--font-ui);
+  color: var(--talas-black);
+}
+
+.dv-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+.dv-header h1 {
+  font-size: 24px;
+  margin: 0;
+}
+
+.dv-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.dv-count {
+  font-size: 13px;
+  color: var(--talas-muted);
+}
+
+.dv-refresh {
+  padding: 7px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #fff;
+  background: var(--talas-blue);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.dv-refresh:hover:not(:disabled) {
+  background: var(--talas-blue-dark);
+}
+
+.dv-refresh:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.dv-error {
+  padding: 10px 14px;
+  color: #FB1D34;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+}
+
+.dv-section {
+  margin-bottom: 32px;
+}
+
+.dv-section h2 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+.dv-section h2 span {
+  color: var(--talas-muted);
+  font-weight: 400;
+}
+
+.dv-empty {
+  font-size: 14px;
+  color: var(--talas-muted);
+  font-style: italic;
+  margin: 0;
+}
+
+.dv-table-wrap {
+  overflow-x: auto;
+  border: 1px solid #e4e7eb;
+  border-radius: 10px;
+}
+
+.dv-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.dv-table th,
+.dv-table td {
+  text-align: left;
+  padding: 9px 12px;
+  white-space: nowrap;
+}
+
+.dv-table thead th {
+  background: #f5f7fa;
+  color: var(--talas-muted);
+  font-weight: 600;
+  border-bottom: 1px solid #e4e7eb;
+}
+
+.dv-table tbody tr:nth-child(even) {
+  background: #fafbfc;
+}
+
+.dv-table tbody tr:hover {
+  background: #eff6ff;
+}
+
+.dv-table td {
+  color: var(--talas-black);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-color-scheme: dark) {
+  .data-viewer {
+    color: #e4e7eb;
+  }
+  .dv-count {
+    color: var(--talas-muted);
+  }
+  .dv-table-wrap {
+    border-color: #323a45;
+  }
+  .dv-table thead th {
+    background: #1f242b;
+    color: var(--talas-muted);
+    border-bottom-color: #323a45;
+  }
+  .dv-table tbody tr:nth-child(even) {
+    background: #1b1f24;
+  }
+  .dv-table tbody tr:hover {
+    background: #22303f;
+  }
+  .dv-table td {
+    color: #e4e7eb;
+  }
+  .dv-error {
+    background: #2a1515;
+    border-color: #5b2525;
+    color: #fca5a5;
+  }
+}

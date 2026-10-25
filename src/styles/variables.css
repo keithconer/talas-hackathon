@@ -1,0 +1,83 @@
+:root {
+  /* TALAS brand palette */
+  --talas-blue: #0353fd;
+  --talas-blue-dark: #0346d6;
+  --talas-blue-soft: #f1f3f5;
+  --talas-yellow: #fdcb17;
+  --talas-yellow-dark: #1e1e1e;
+  --talas-yellow-soft: #f6f5f1;
+  --talas-black: #1e1e1e;
+  --talas-red: #fb1d34;
+  --talas-red-soft: #fff0f2;
+
+  /* Shared surfaces, text, borders, and status colors */
+  --talas-paper: #ffffff;
+  --talas-charcoal: var(--talas-black);
+  --talas-green: var(--talas-black);
+  --talas-mint: #f4f5f6;
+  --talas-sky: #f4f5f6;
+  --talas-buttercream: #f6f5f1;
+  --talas-coral: var(--talas-red);
+  --talas-line: #e5e7eb;
+  --talas-muted: #777777;
+
+  --color-primary: var(--talas-blue);
+  --color-primary-dark: var(--talas-blue-dark);
+  --color-primary-light: var(--talas-blue-soft);
+  --color-secondary: var(--talas-blue);
+  --color-secondary-dark: var(--talas-blue-dark);
+  --color-secondary-light: var(--talas-blue-soft);
+  --color-tertiary: var(--talas-yellow);
+  --color-tertiary-dark: var(--talas-yellow-dark);
+  --color-tertiary-light: var(--talas-yellow-soft);
+  --color-neutral: var(--talas-black);
+  --color-bg: var(--talas-paper);
+  --color-surface: var(--talas-paper);
+  --color-surface-muted: var(--talas-blue-soft);
+  --color-border: var(--talas-line);
+  --color-text: var(--talas-black);
+  --color-text-muted: var(--talas-muted);
+  --color-text-inverted: #ffffff;
+  --color-error: var(--talas-red);
+
+  --talas-radius-card: 14px;
+  --talas-tap-min: 48px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-pill: 999px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-8: 48px;
+  --space-10: 64px;
+
+  /* Legacy aliases used by the reading assessment stylesheet. */
+  --sprout: var(--talas-blue);
+  --sprout-dark: var(--talas-blue-dark);
+  --buttercup: var(--talas-yellow);
+  --sky: var(--talas-blue);
+  --paper: var(--talas-paper);
+  --coral: var(--talas-red);
+  --mint: var(--talas-blue-soft);
+  --buttercream: var(--talas-yellow-soft);
+  --sky-soft: var(--talas-blue-soft);
+  --ink: var(--talas-black);
+  --ink-muted: #666666;
+  --line: var(--talas-line);
+
+  --font-display: 'Fredoka', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --font-reading: 'Inter', system-ui, sans-serif;
+  --font-ui: 'Inter', system-ui, sans-serif;
+  --font-heading: var(--font-display);
+  --font-body: var(--font-ui);
+
+  --shadow-card: 0 8px 20px rgba(30, 30, 30, 0.08);
+  --shadow-soft: 0 4px 12px rgba(30, 30, 30, 0.06);
+  --shadow-sm: 0 1px 2px rgba(30, 30, 30, 0.06);
+  --shadow-md: 0 8px 24px rgba(30, 30, 30, 0.1);
+  --shadow-lg: 0 20px 48px rgba(30, 30, 30, 0.14);
+}

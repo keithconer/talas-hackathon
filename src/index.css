@@ -1,0 +1,117 @@
+@import 'tailwindcss';
+@import './styles/variables.css';
+
+/* Existing semantic utility names remain in place; their values now follow
+   the blue, yellow, black, and white TALAS palette. */
+@theme {
+  --color-sprout-500: #1e1e1e;
+  --color-sprout-600: #1e1e1e;
+  --color-sprout-700: #1e1e1e;
+  --color-sprout-50: #f4f5f6;
+  --color-sprout-100: #eceef0;
+
+  --color-buttercup-500: #fdcb17;
+  --color-buttercup-600: #1e1e1e;
+  --color-buttercup-700: #1e1e1e;
+  --color-buttercup-50: #f6f5f1;
+  --color-buttercup-100: #efeee8;
+
+  --color-amber-50: #f6f5f1;
+  --color-amber-100: #efeee8;
+  --color-amber-200: #e5e3da;
+  --color-amber-300: #fdcb17;
+  --color-amber-600: #1e1e1e;
+  --color-amber-700: #1e1e1e;
+  --color-amber-800: #1e1e1e;
+  --color-amber-900: #1e1e1e;
+
+  --color-sky-400: #0353fd;
+  --color-sky-500: #0353fd;
+  --color-sky-600: #0346d6;
+  --color-sky-50: #f1f3f6;
+  --color-sky-100: #e8ebf0;
+
+  --color-coral-500: #fb1d34;
+  --color-coral-50: #fff0f2;
+  --color-coral-100: #fff0f2;
+  --color-coral-400: #fb1d34;
+  --color-paper: #ffffff;
+  --color-charcoal: #1e1e1e;
+
+  /* Reading-level indicators retain distinct meaning while using brand hues. */
+  --color-crla-gr: #0353fd;
+  --color-crla-lr: #fdcb17;
+  --color-crla-mr: #1e1e1e;
+  --color-crla-fr: #fb1d34;
+
+  --font-display: 'Fredoka', 'Arial Rounded MT Bold', system-ui, sans-serif;
+  --font-reading: 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, sans-serif;
+}
+
+:root {
+  color-scheme: light;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background: var(--color-paper);
+  color: var(--color-charcoal);
+  font-family: var(--font-ui);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+}
+
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-ui);
+}
+
+button,
+a,
+[role='button'],
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+:focus-visible {
+  outline: 3px solid var(--talas-blue) !important;
+  outline-offset: 3px !important;
+}
+
+::selection {
+  color: var(--talas-black);
+  background: var(--talas-yellow);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
