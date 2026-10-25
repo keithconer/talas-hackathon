@@ -1,6 +1,8 @@
 import FrogMascot from '../../components/FrogMascot'
 import { mockAssignment } from '../../data/mockData'
 import type { InterventionPlan } from '../../data'
+import type { PracticeProfile } from '../../data/practiceData'
+import { useAssessmentAttempts } from '../../features/teacher/profile/useAssessmentAttempts'
 
 const DASHBOARD_ICONS = {
   book: '/imgs/dashboard/pixel-book.svg',
@@ -11,6 +13,7 @@ const DASHBOARD_ICONS = {
 } as const
 
 interface Props {
+  learnerId: string
   learnerName: string
   learnerGrade: string
   learnerSection: string
@@ -26,6 +29,7 @@ interface Props {
   automaticLevel?: number
   /** Active or assigned reading intervention plan (never overwrites existing tasks). */
   interventionPlan?: InterventionPlan | null
+  practiceProfile: PracticeProfile
   /** Opens the dedicated student intervention workspace. */
   onStartIntervention?: (activityId?: string) => void
 }
@@ -108,6 +112,7 @@ function StatCard({
 }
 
 export default function LearnerDashboard({
+  learnerId,
   learnerName,
   learnerGrade,
   learnerSection,
@@ -118,10 +123,48 @@ export default function LearnerDashboard({
   readingTitle,
   automaticLevel,
   interventionPlan,
+  practiceProfile,
   onStartIntervention,
 }: Props) {
   const displayName = learnerName.split(' ')[0] || learnerName || 'Mag-aaral'
   const initials = getInitials(learnerName || 'M')
+  const { oralAttempts, silentAttempts, pictureAttempts, interventionPlans } = useAssessmentAttempts(learnerId)
+
+  const completedInterventionCount = interventionPlans
+    .flatMap((plan) => plan.activities)
+    .filter((activity) => Boolean(activity.result)).length
+  const completedActivityCount =
+    practiceProfile.completedActivityIds.length +
+    oralAttempts.length +
+    silentAttempts.length +
+    pictureAttempts.length +
+    completedInterventionCount
+  const earnedBadgeCount = completedActivityCount > 0 ? 1 : 0
+
+  const activityDays = new Set([
+    ...(practiceProfile.completionDates ?? []),
+    ...oralAttempts.map((attempt) => attempt.createdAt.slice(0, 10)),
+    ...silentAttempts.map((attempt) => attempt.createdAt.slice(0, 10)),
+    ...pictureAttempts.map((attempt) => attempt.createdAt.slice(0, 10)),
+    ...interventionPlans.flatMap((plan) =>
+      plan.activities.flatMap((activity) =>
+        activity.result?.completedAt ? [activity.result.completedAt.slice(0, 10)] : [],
+      ),
+    ),
+  ])
+  let streakDays = 0
+  const streakCursor = new Date()
+  streakCursor.setUTCHours(0, 0, 0, 0)
+  let streakDate = streakCursor.toISOString().slice(0, 10)
+  if (!activityDays.has(streakDate)) {
+    streakCursor.setUTCDate(streakCursor.getUTCDate() - 1)
+    streakDate = streakCursor.toISOString().slice(0, 10)
+  }
+  while (activityDays.has(streakDate)) {
+    streakDays += 1
+    streakCursor.setUTCDate(streakCursor.getUTCDate() - 1)
+    streakDate = streakCursor.toISOString().slice(0, 10)
+  }
 
   const totalInterventionActivities = interventionPlan?.activities.length ?? 0
   const completedInterventionActivities =
@@ -167,10 +210,11 @@ export default function LearnerDashboard({
         {/* ───────── TOP BAR ───────── */}
         <div
           style={{
-            display: 'flex',
+          display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
             gap: '12px',
+          flexWrap: 'wrap',
           }}
         >
           <span
@@ -324,25 +368,25 @@ export default function LearnerDashboard({
           </div>
 
           {/* Stat row */}
-          <div style={{ display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 210px), 1fr))', gap: '12px' }}>
             <StatCard
               icon={DASHBOARD_ICONS.book}
-              value="Antas 2"
+              value={automaticLevel ? `Antas ${automaticLevel}` : '—'}
               label="Antas ng pagbasa"
               bg="var(--talas-mint)"
               color="var(--talas-green)"
             />
             <StatCard
               icon={DASHBOARD_ICONS.streak}
-              value="5 araw"
+              value={`${streakDays} araw`}
               label="Sunod-sunod na pagbasa"
               bg="var(--talas-buttercream)"
               color="var(--talas-yellow-dark)"
             />
             <StatCard
               icon={DASHBOARD_ICONS.award}
-              value="3 badge"
-              label="Mga nakamit"
+              value={`${earnedBadgeCount} badge`}
+              label={earnedBadgeCount > 0 ? 'Mga nakamit' : 'Gumawa para mag-unlock'}
               bg="var(--talas-sky)"
               color="var(--talas-blue)"
             />
@@ -366,7 +410,7 @@ export default function LearnerDashboard({
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))',
+            gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 340px), 1fr))',
             gap: '20px',
             alignItems: 'stretch',
           }}

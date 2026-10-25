@@ -231,6 +231,9 @@ export default function StudentInterventionView() {
       });
 
       await putRecord(STORES.interventionPlans, plan);
+      // Push a newly created assignment immediately so the learner's active
+      // dashboard can pick it up on its next sync refresh.
+      void syncNow().catch(() => {});
       setRefreshTick((t) => t + 1);
       setSelectedPlanId(plan.id);
       setInfoMsg(
@@ -281,6 +284,7 @@ export default function StudentInterventionView() {
       teacherContext.teacherId
     );
     await putRecord(STORES.interventionPlans, updated);
+    void syncNow().catch(() => {});
     setRefreshTick((t) => t + 1);
     setInfoMsg(`Plan status updated to '${nextStatus}'.`);
   };
@@ -495,6 +499,8 @@ export default function StudentInterventionView() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {summary.assessmentRefs.map((ref) => {
               const checked = effectiveSelectedAssessmentIds.includes(ref.id);
+              const displayTitle = ref.title.replace(/Salita at Larawan/g, "Supplementary Activity");
+              const displayRemarks = ref.remarks.replace(/Salita at Larawan/g, "Supplementary activity");
               return (
                 <label
                   key={ref.id}
@@ -513,7 +519,7 @@ export default function StudentInterventionView() {
                   <div className="text-xs font-sans space-y-0.5 flex-1">
                     <div className="flex items-center justify-between gap-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-charcoal">{ref.title}</span>
+                        <span className="font-semibold text-charcoal">{displayTitle}</span>
                         {ref.eligibleTrigger && (
                           <span className="rounded bg-coral-50 px-1.5 py-0.5 text-[10px] font-semibold text-coral-500">
                             Trigger
@@ -539,7 +545,7 @@ export default function StudentInterventionView() {
                         ? "(0–16 Screening Scale)"
                         : `(${ref.kind.toUpperCase()} Scale)`}
                     </div>
-                    <div className="text-gray-500">{ref.remarks}</div>
+                    <div className="text-gray-500">{displayRemarks}</div>
                   </div>
                 </label>
               );

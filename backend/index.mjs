@@ -72,7 +72,13 @@ async function transcribeRecording(key, passage) {
 
   const form = new FormData();
   const contentType = stored.ContentType || "audio/webm";
-  const extension = contentType.includes("mp4") ? "m4a" : contentType.includes("ogg") ? "ogg" : "webm";
+  const extension = contentType.includes("wav")
+    ? "wav"
+    : contentType.includes("mp4")
+      ? "m4a"
+      : contentType.includes("ogg")
+        ? "ogg"
+        : "webm";
   form.append("file", new Blob([bytes], { type: contentType }), `reading.${extension}`);
   form.append("model", "gpt-transcribe");
   form.append("prompt", `Filipino/Tagalog child reading aloud. Transcribe only words actually spoken; do not fill in omitted words. Use this passage only to resolve the spelling of words: ${passage.slice(0, 8000)}`);

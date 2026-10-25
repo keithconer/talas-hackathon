@@ -51,8 +51,8 @@ export default function LearnerProfile({
 
   // Titles of the activities the learner has finished, from the registry.
   const completedTitles = [
-    ...oralAttempts.map((attempt) => `Pasalitang Pagbasa · ${new Date(attempt.createdAt).toLocaleDateString()}`),
-    ...silentAttempts.map((attempt) => `${attempt.title} · Tahimik na Pagbasa`),
+    ...oralAttempts.map((attempt) => `Pasalitang Pagbasa · ${attempt.accuracy}% · ${new Date(attempt.createdAt).toLocaleDateString()}`),
+    ...silentAttempts.map((attempt) => `${attempt.title} · Tahimik na Pagbasa · ${attempt.scorePercent}% (${attempt.correctAnswers}/${attempt.totalQuestions})`),
     ...pictureAttempts.map((attempt) => `${attempt.title} · ${attempt.scorePercent}%`),
     ...interventionPlans.flatMap((plan) => plan.activities.filter((activity) => activity.result).map((activity) => activity.title)),
     ...practiceProfile.completedActivityIds.map((id) => activityRegistry.find((a) => a.id === id)?.title).filter((title): title is string => Boolean(title)),
@@ -154,7 +154,9 @@ export default function LearnerProfile({
                 fontWeight: 500,
               }}
             >
-              Antas {practiceProfile.currentLevel} ng pagbasa
+              {oralAttempts.length > 0
+                ? `Antas ${practiceProfile.currentLevel} ng pagbasa`
+                : 'Basahin ang gawain para matukoy ang antas'}
             </div>
           </div>
         </div>
@@ -181,7 +183,7 @@ export default function LearnerProfile({
             <div style={{ fontFamily: FONT_DISPLAY, fontSize: '18px', fontWeight: 700, color: 'var(--talas-charcoal)' }}>
             Mga Nakamit
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', columnGap: '20px', rowGap: '4px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', columnGap: '20px', rowGap: '4px' }}>
             {badges.map((b) => (
               <div
                 key={b.label}
@@ -206,7 +208,7 @@ export default function LearnerProfile({
                   {b.label}
                 </span>
                 <span style={{ fontFamily: FONT_UI, fontSize: '11px', color: b.earned ? 'var(--talas-green)' : 'var(--talas-muted)' }}>
-                  {b.earned ? 'Nakuha' : 'Hindi pa'}
+                  {b.earned ? 'Nakuha' : 'Gumawa para ma-unlock'}
                 </span>
               </div>
             ))}

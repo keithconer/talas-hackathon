@@ -15,7 +15,7 @@ interface LearnerListTableProps {
 /**
  * Derives a CRLA level from a learner's submissions using the CRLA standard
  * (see reading/crla.ts). Based strictly on the learner's best oral-reading
- * accuracy — Salita at Larawan scores are never included here.
+ * accuracy. Supplementary activity scores are never included here.
  */
 function levelFromAttempts(attempts: ReadingAttempt[]): CrlaLevel {
   if (attempts.length === 0) return null
@@ -68,7 +68,7 @@ function LearnerListTable({ sectionId = 'all' }: LearnerListTableProps) {
   const navigate = useNavigate()
   const [page, setPage] = useState(1)
   const learners = learnersForSection(sectionId)
-  const { byLearner, pictureByLearner } = useSubmissions()
+  const { byLearner, silentAttempts } = useSubmissions()
   const pageCount = Math.max(1, Math.ceil(learners.length / PAGE_SIZE))
   const currentPage = Math.min(page, pageCount)
   const visibleLearners = learners.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
@@ -100,7 +100,6 @@ function LearnerListTable({ sectionId = 'all' }: LearnerListTableProps) {
               <th className="px-4 py-2.5 font-sans text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Learner</th>
               <th className="px-4 py-2.5 font-sans text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Grade</th>
               <th className="px-4 py-2.5 font-sans text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Reading Level</th>
-              <th className="px-4 py-2.5 font-sans text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Salita at Larawan</th>
               <th className="px-4 py-2.5 font-sans text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Submissions</th>
               <th className="px-4 py-2.5 font-sans text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Last Active</th>
             </tr>
@@ -108,32 +107,19 @@ function LearnerListTable({ sectionId = 'all' }: LearnerListTableProps) {
           <tbody>
             {learners.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center font-sans text-sm text-gray-400">
+                <td colSpan={5} className="px-6 py-8 text-center font-sans text-sm text-gray-400">
                   No learners in this section.
                 </td>
               </tr>
             ) : (
               visibleLearners.map((l) => {
                 const attempts = byLearner[l.id] ?? []
-                const pictureAttempts = pictureByLearner[l.id] ?? []
-                const latestPicture = pictureAttempts[0]
-                const pictureAvg =
-                  pictureAttempts.length > 0
-                    ? Math.round(
-                        pictureAttempts.reduce((sum, a) => sum + a.scorePercent, 0) /
-                          pictureAttempts.length,
-                      )
-                    : null
-                // Latest oral attempt first — the "to review" badge opens it directly.
-                const sorted = [...attempts].sort((a, b) =>
-                  a.createdAt < b.createdAt ? 1 : -1,
-                )
-                const latest = sorted[0]
+                const silentForLearner = silentAttempts.filter((attempt) => attempt.learnerId === l.id)
                 // CRLA Reading Level comes strictly from oral reading attempts.
                 const level = levelFromAttempts(attempts)
                 const lastTime = latestTimestamp([
                   ...attempts.map((a) => a.createdAt),
-                  ...pictureAttempts.map((a) => a.createdAt),
+                  ...silentAttempts.filter((a) => a.learnerId === l.id).map((a) => a.createdAt),
                 ])
                 return (
                   <tr
@@ -152,7 +138,7 @@ function LearnerListTable({ sectionId = 'all' }: LearnerListTableProps) {
                     <td className="px-4 py-2.5 font-sans text-[13px] text-gray-600">{l.grade}</td>
                     <td className="px-4 py-2.5"><LevelBadge level={level} /></td>
                     <td className="px-4 py-2.5">
-                      {latestPicture && pictureAvg != null ? (
+                      {attempts.length + silentForLearner.length > 0 ? (
                         <button
                           type="button"
                           onClick={(e) => {
@@ -160,25 +146,8 @@ function LearnerListTable({ sectionId = 'all' }: LearnerListTableProps) {
                             navigate(`/teacher/learners/${l.id}/activities`)
                           }}
                           className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-gray-200 bg-white font-sans text-xs font-medium text-charcoal hover:bg-gray-50 transition-colors"
-                          title="Separate grade for Salita at Larawan (not included in Oral/Silent reading)"
                         >
-                          {pictureAvg}% ({latestPicture.correctAnswers}/{latestPicture.totalQuestions})
-                        </button>
-                      ) : (
-                        <span className="font-sans text-[13px] text-gray-400">—</span>
-                      )}
-                    </td>
-                    <td className="px-4 py-2.5">
-                      {latest ? (
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            navigate(`/teacher/activities/${latest.id}/review`)
-                          }}
-                          className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md border border-gray-200 bg-white font-sans text-xs font-medium text-charcoal hover:bg-gray-50 transition-colors"
-                        >
-                          {attempts.length} to review
+                          {attempts.length + silentForLearner.length} submissions
                         </button>
                       ) : (
                         <span className="font-sans text-[13px] text-gray-400">—</span>

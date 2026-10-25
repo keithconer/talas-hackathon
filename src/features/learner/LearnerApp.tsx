@@ -107,6 +107,52 @@ export default function LearnerApp() {
     setPracticeProfileReadyFor(learner.id)
   }, [learner])
 
+  // Keep assigned intervention plans fresh while the learner dashboard is
+  // open. The app's sync API is the cross-device transport; polling also picks
+  // up IndexedDB changes from another tab in the same browser.
+  useEffect(() => {
+    if (!learner) return
+    let cancelled = false
+    let refreshing = false
+
+    const refreshInterventionPlan = async () => {
+      if (refreshing) return
+      refreshing = true
+      try {
+        try {
+          await syncNow()
+        } catch {
+          // Keep the locally stored plan available while offline.
+        }
+        const plans = await listInterventionPlansByLearner(learner.id)
+        const activePlan =
+          plans.find((plan) => plan.status === 'Approved' || plan.status === 'In Progress') ??
+          plans[0] ??
+          null
+        if (!cancelled) setInterventionPlan(activePlan)
+      } catch {
+        // A transient storage/network issue should not interrupt the learner.
+      } finally {
+        refreshing = false
+      }
+    }
+
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') void refreshInterventionPlan()
+    }
+
+    void refreshInterventionPlan()
+    const intervalId = window.setInterval(() => void refreshInterventionPlan(), 5000)
+    window.addEventListener('focus', refreshWhenVisible)
+    document.addEventListener('visibilitychange', refreshWhenVisible)
+    return () => {
+      cancelled = true
+      window.clearInterval(intervalId)
+      window.removeEventListener('focus', refreshWhenVisible)
+      document.removeEventListener('visibilitychange', refreshWhenVisible)
+    }
+  }, [learner])
+
   useEffect(() => {
     if (!learner || practiceProfileReadyFor !== learner.id) return
     try {
@@ -241,6 +287,7 @@ export default function LearnerApp() {
     case 'dashboard':
       return (
         <LearnerDashboard
+          learnerId={learner.id}
           learnerName={learnerName}
           learnerGrade={learner.grade}
           learnerSection={sectionLabel(learner.sectionId).split('·')[1]?.trim() ?? learner.sectionId}
@@ -248,6 +295,7 @@ export default function LearnerApp() {
           readingTitle={automaticActivity?.title}
           automaticLevel={automaticActivity?.level}
           interventionPlan={interventionPlan}
+          practiceProfile={practiceProfile}
           onStartIntervention={(activityId) => {
             setSelectedInterventionActivityId(activityId)
             setCurrentScreen('intervention-activity')
@@ -280,12 +328,14 @@ export default function LearnerApp() {
         />
       ) : (
         <LearnerDashboard
+          learnerId={learner.id}
           learnerName={learnerName}
           learnerGrade={learner.grade}
           learnerSection={sectionLabel(learner.sectionId).split('·')[1]?.trim() ?? learner.sectionId}
           onLogout={handleExit}
           readingTitle={automaticActivity?.title}
           automaticLevel={automaticActivity?.level}
+          practiceProfile={practiceProfile}
           onStartAssessment={() => { if (!formalAssessmentLocked) setCurrentScreen('oral-assessment') }}
           assessmentLocked={formalAssessmentLocked}
           onStartPractice={handleStartPractice}

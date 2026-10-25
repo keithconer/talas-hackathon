@@ -596,7 +596,6 @@ export default function InterventionDashboard() {
           <option value="screening">Screening (0–16 / 20 Scale)</option>
           <option value="oral">Oral Reading (CRLA)</option>
           <option value="silent">Silent Reading</option>
-          <option value="picture">Salita at Larawan (Separate)</option>
         </select>
 
         <select
@@ -641,7 +640,7 @@ export default function InterventionDashboard() {
                 <th className="py-2.5 px-3">Grade & Section</th>
                 <th className="py-2.5 px-3">Screening (0–16 Threshold)</th>
                 <th className="py-2.5 px-3">Oral Reading (CRLA)</th>
-                <th className="py-2.5 px-3">Other Activities</th>
+                <th className="py-2.5 px-3">Silent Reading</th>
                 <th className="py-2.5 px-3">Remarks & Status</th>
                 <th className="py-2.5 px-3 text-right">Action</th>
               </tr>
@@ -651,7 +650,6 @@ export default function InterventionDashboard() {
                 const scr = item.latestScreening;
                 const oral = item.latestOral;
                 const silent = item.latestSilent;
-                const pic = item.latestPicture;
 
                 return (
                   <tr
@@ -744,17 +742,6 @@ export default function InterventionDashboard() {
                         ) : (
                           <div className="text-gray-400">Silent: —</div>
                         )}
-                        {pic ? (
-                          <div>
-                            <span className="font-medium text-charcoal">
-                              Salita at Larawan:
-                            </span>{" "}
-                            {pic.correctAnswers}/{pic.totalQuestions}{" "}
-                            <span className="text-[10px] text-gray-400">(Separate)</span>
-                          </div>
-                        ) : (
-                          <div className="text-gray-400">Salita at Larawan: —</div>
-                        )}
                       </div>
                     </td>
 
@@ -762,7 +749,7 @@ export default function InterventionDashboard() {
                       <div className="space-y-1">
                         {renderStatusBadge(item.interventionStatus)}
                         <p className="text-xs text-gray-500 line-clamp-2 max-w-[240px]">
-                          {item.eligibilityReason}
+                          {item.eligibilityReason.replace(/Salita at Larawan/g, "Supplementary activity")}
                         </p>
                       </div>
                     </td>

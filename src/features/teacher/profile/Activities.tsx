@@ -4,17 +4,14 @@ import {
   Bandage,
   BarChart3,
   BookOpen,
-  Check,
   Clock,
   ExternalLink,
-  Image,
   Mic,
   RefreshCw,
   Sparkles,
   TrendingDown,
   TrendingUp,
   Minus,
-  X,
 } from 'lucide-react'
 import { useAssessmentAttempts } from './useAssessmentAttempts'
 import Pagination from '../shared/Pagination'
@@ -85,25 +82,21 @@ function trendFor(entries: ProgressEntry[]): {
 
 /**
  * Practice Progress — learner-scoped oral and silent reading history, plus
- * completely separate sections and grade calculations for Salita at Larawan
- * and Reading Intervention Plans.
+ * separate Reading Intervention Plan scores.
  */
 function Activities() {
   const { learnerId } = useParams()
   const {
     oralAttempts,
     silentAttempts,
-    pictureAttempts,
     interventionPlans,
     loading,
     refresh,
   } = useAssessmentAttempts(learnerId)
   const [historyPage, setHistoryPage] = useState(1)
-  const [picturePage, setPicturePage] = useState(1)
   const [interventionPage, setInterventionPage] = useState(1)
 
-  // Oral + Silent entries ONLY. Salita at Larawan and Intervention Plans are
-  // intentionally excluded so their scores never mix into oral or silent reading grades.
+  // Keep intervention scores separate from oral and silent reading grades.
   const entries: ProgressEntry[] = [
     ...oralAttempts.map((attempt) => ({
       id: attempt.id,
@@ -136,13 +129,6 @@ function Activities() {
   const oralAverage = average(oralAttempts.map((attempt) => attempt.accuracy))
   const silentAverage = average(silentAttempts.map((attempt) => attempt.scorePercent))
 
-  // Separate grade calculations exclusively for Salita at Larawan.
-  const pictureAverage = average(pictureAttempts.map((attempt) => attempt.scorePercent))
-  const bestPicture =
-    pictureAttempts.length > 0
-      ? Math.max(...pictureAttempts.map((attempt) => attempt.scorePercent))
-      : null
-
   // Separate grade calculations exclusively for Reading Intervention Plans.
   const activePlan =
     interventionPlans.find(
@@ -153,8 +139,6 @@ function Activities() {
   const allInterventionActivities = interventionPlans.flatMap((plan) =>
     plan.activities.map((act) => ({ plan, act })),
   )
-  const currentPicturePage = Math.min(picturePage, Math.max(1, Math.ceil(pictureAttempts.length / PAGE_SIZE)))
-  const visiblePictureAttempts = pictureAttempts.slice((currentPicturePage - 1) * PAGE_SIZE, currentPicturePage * PAGE_SIZE)
   const currentInterventionPage = Math.min(interventionPage, Math.max(1, Math.ceil(allInterventionActivities.length / PAGE_SIZE)))
   const visibleInterventionActivities = allInterventionActivities.slice(
     (currentInterventionPage - 1) * PAGE_SIZE,
@@ -220,8 +204,7 @@ function Activities() {
         </div>
       </section>
 
-      {/* Oral, Silent, Salita at Larawan, and Reading Intervention summaries stay strictly separate so grades are never mixed. */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
         <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
           <div className="flex items-center gap-2 text-charcoal">
             <Mic className="w-5 h-5" aria-hidden />
@@ -266,29 +249,6 @@ function Activities() {
           {entries[0] && (
             <p className="font-sans text-xs font-semibold text-sprout-500 mt-2">
               Latest score: {entries[0].score}%
-            </p>
-          )}
-        </section>
-
-        <section className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-          <div className="flex items-center justify-between gap-2 text-charcoal">
-            <span className="inline-flex items-center gap-2">
-              <Image className="w-5 h-5" aria-hidden />
-              <span className="font-sans text-xs font-bold uppercase tracking-wide">Salita at Larawan</span>
-            </span>
-            <span className="px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 font-sans text-[10px] font-bold">
-              Separate
-            </span>
-          </div>
-          <p className="font-display text-2xl font-bold text-charcoal mt-2">
-            {pictureAverage == null ? '—' : `${pictureAverage}%`}
-          </p>
-          <p className="font-sans text-xs text-gray-500 mt-1">
-            Separate average · {pictureAttempts.length} attempt{pictureAttempts.length === 1 ? '' : 's'}
-          </p>
-          {bestPicture != null && (
-            <p className="font-sans text-xs font-semibold text-amber-600 mt-2">
-              Best: {bestPicture}%
             </p>
           )}
         </section>
@@ -396,84 +356,6 @@ function Activities() {
           </section>
         </>
       )}
-
-      {/* ------------------------------------------------------------------ */}
-      {/* SALITA AT LARAWAN RESULTS — separate from Oral & Silent grades     */}
-      {/* ------------------------------------------------------------------ */}
-      <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="flex flex-wrap items-center gap-2 px-4 py-3 border-b border-gray-100">
-          <Image className="w-4 h-4 text-charcoal" aria-hidden />
-          <h2 className="font-display text-sm font-semibold text-charcoal">
-            Salita at Larawan Results
-          </h2>
-          <span className="ml-auto inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-gray-50 text-gray-600 font-sans text-[11px] font-medium">
-            Hiwalay sa Oral at Silent Reading
-          </span>
-        </div>
-
-        {pictureAttempts.length === 0 ? (
-          <div className="p-8 text-center font-sans text-sm text-gray-400">
-            Wala pang naisumiteng sagot sa Salita at Larawan para sa mag-aaral na ito.
-          </div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left">
-              <thead>
-                <tr className="border-b border-gray-100 bg-paper">
-                  <th className="px-6 py-3 font-sans text-xs font-semibold text-gray-500 uppercase tracking-wide">Date</th>
-                  <th className="px-6 py-3 font-sans text-xs font-semibold text-gray-500 uppercase tracking-wide">Activity</th>
-                  <th className="px-6 py-3 font-sans text-xs font-semibold text-gray-500 uppercase tracking-wide">Separate Grade</th>
-                  <th className="px-6 py-3 font-sans text-xs font-semibold text-gray-500 uppercase tracking-wide">Correct</th>
-                  <th className="px-6 py-3 font-sans text-xs font-semibold text-gray-500 uppercase tracking-wide">Word Answers</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visiblePictureAttempts.map((attempt) => (
-                  <tr key={attempt.id} className="border-b border-gray-50 last:border-0">
-                    <td className="px-6 py-3 font-sans text-sm text-gray-600 whitespace-nowrap">
-                      {formatDate(attempt.createdAt)}
-                    </td>
-                    <td className="px-6 py-3 font-sans text-sm font-semibold text-charcoal">
-                      {attempt.title}
-                    </td>
-                    <td className="px-6 py-3">
-                      <span className="inline-flex px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 font-sans text-xs font-bold">
-                        {attempt.scorePercent}%
-                      </span>
-                    </td>
-                    <td className="px-6 py-3 font-sans text-sm text-gray-600 whitespace-nowrap">
-                      {attempt.correctAnswers}/{attempt.totalQuestions} tama
-                    </td>
-                    <td className="px-6 py-3">
-                      <div className="flex flex-wrap gap-1.5">
-                        {attempt.responses.map((res, idx) => (
-                          <span
-                            key={`${attempt.id}-${res.word}-${idx}`}
-                            className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md font-sans text-xs font-semibold ${
-                              res.correct
-                                ? 'bg-sprout-50 text-sprout-600'
-                                : 'bg-coral-50 text-coral-500'
-                            }`}
-                          >
-                            {res.correct ? (
-                              <Check className="w-3 h-3" aria-hidden />
-                            ) : (
-                              <X className="w-3 h-3" aria-hidden />
-                            )}
-                            {res.word}
-                            {!res.correct ? ` (${res.selected})` : ''}
-                          </span>
-                        ))}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        )}
-        <Pagination total={pictureAttempts.length} page={currentPicturePage} pageSize={PAGE_SIZE} onPageChange={setPicturePage} />
-      </section>
 
       {/* ------------------------------------------------------------------ */}
       {/* READING INTERVENTION PLAN & SEPARATE SCORES                        */}

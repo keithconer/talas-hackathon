@@ -70,6 +70,44 @@ function getSpeechRecognitionCtor(): SpeechRecognitionCtor | null {
   return w.SpeechRecognition ?? w.webkitSpeechRecognition ?? null;
 }
 
+type WebkitAudioWindow = typeof window & { webkitAudioContext?: typeof AudioContext }
+
+function encodeMonoWav(chunks: Float32Array[], sampleRate: number): Blob {
+  const sampleCount = chunks.reduce((total, chunk) => total + chunk.length, 0)
+  const buffer = new ArrayBuffer(44 + sampleCount * 2)
+  const view = new DataView(buffer)
+  const writeText = (offset: number, value: string) => {
+    for (let index = 0; index < value.length; index += 1) {
+      view.setUint8(offset + index, value.charCodeAt(index))
+    }
+  }
+
+  writeText(0, 'RIFF')
+  view.setUint32(4, 36 + sampleCount * 2, true)
+  writeText(8, 'WAVE')
+  writeText(12, 'fmt ')
+  view.setUint32(16, 16, true)
+  view.setUint16(20, 1, true)
+  view.setUint16(22, 1, true)
+  view.setUint32(24, sampleRate, true)
+  view.setUint32(28, sampleRate * 2, true)
+  view.setUint16(32, 2, true)
+  view.setUint16(34, 16, true)
+  writeText(36, 'data')
+  view.setUint32(40, sampleCount * 2, true)
+
+  let offset = 44
+  for (const chunk of chunks) {
+    for (const sample of chunk) {
+      const clamped = Math.max(-1, Math.min(1, sample))
+      view.setInt16(offset, clamped < 0 ? clamped * 0x8000 : clamped * 0x7fff, true)
+      offset += 2
+    }
+  }
+
+  return new Blob([buffer], { type: 'audio/wav' })
+}
+
 /* --------------------------------------------------------------- Hook ---- */
 
 export type RecordingStatus = "idle" | "loading" | "recording" | "done" | "error";
@@ -127,6 +165,10 @@ export function useSpeechRecognition(
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const recorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
+  const fallbackAudioContextRef = useRef<AudioContext | null>(null);
+  const fallbackSourceRef = useRef<MediaStreamAudioSourceNode | null>(null);
+  const fallbackProcessorRef = useRef<ScriptProcessorNode | null>(null);
+  const fallbackAudioChunksRef = useRef<Float32Array[]>([]);
   const chunksRef = useRef<Blob[]>([]);
   const audioBlobRef = useRef<Blob | null>(null);
   const finalRef = useRef("");
@@ -160,6 +202,14 @@ export function useSpeechRecognition(
   }, [modelUrl]);
 
   const cleanupStream = useCallback(() => {
+    fallbackProcessorRef.current?.disconnect();
+    fallbackSourceRef.current?.disconnect();
+    fallbackProcessorRef.current = null;
+    fallbackSourceRef.current = null;
+    if (fallbackAudioContextRef.current) {
+      void fallbackAudioContextRef.current.close().catch(() => undefined);
+      fallbackAudioContextRef.current = null;
+    }
     streamRef.current?.getTracks().forEach((t) => t.stop());
     streamRef.current = null;
   }, []);
@@ -182,6 +232,18 @@ export function useSpeechRecognition(
     setStatus("loading");
 
     // 1) Capture the mic once; both the recorder and recognizers share it.
+    if (!window.isSecureContext) {
+      setError("Kailangan ng ligtas na koneksyon (HTTPS) para magamit ang mikropono sa device na ito.");
+      setStatus("error");
+      return;
+    }
+
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Hindi suportado ng browser na ito ang mikropono. Buksan ang TALAS sa kasalukuyang Safari o Chrome.");
+      setStatus("error");
+      return;
+    }
+
     let stream: MediaStream;
     try {
       stream = await navigator.mediaDevices.getUserMedia({
@@ -193,35 +255,68 @@ export function useSpeechRecognition(
       });
       streamRef.current = stream;
     } catch {
-      setError("Hindi ma-access ang mikropono.");
+      setError("Hindi ma-access ang mikropono. Payagan ang microphone access sa browser settings at subukan muli.");
       setStatus("error");
       return;
     }
 
     // 2) Always record audio for teacher review.
     try {
-      const recorder = new MediaRecorder(stream);
-      recorderRef.current = recorder;
-      // Zero point for word offsets: the instant recording truly begins.
-      recorder.onstart = () => {
+      if (typeof MediaRecorder !== "undefined") {
+        const supportedMimeTypes = [
+          "audio/webm;codecs=opus",
+          "audio/mp4",
+          "audio/webm",
+          "audio/ogg;codecs=opus",
+        ];
+        const mimeType = supportedMimeTypes.find((type) => MediaRecorder.isTypeSupported?.(type));
+        const recorder = mimeType
+          ? new MediaRecorder(stream, { mimeType })
+          : new MediaRecorder(stream);
+        recorderRef.current = recorder;
+        // Zero point for word offsets: the instant recording truly begins.
+        recorder.onstart = () => {
+          recClockRef.current = performance.now();
+        };
+        recorder.ondataavailable = (e) => {
+          if (e.data.size > 0) chunksRef.current.push(e.data);
+        };
+        recorder.onstop = () => {
+          if (chunksRef.current.length > 0) {
+            const blob = new Blob(chunksRef.current, {
+              type: recorder.mimeType || "audio/webm",
+            });
+            audioBlobRef.current = blob;
+            setAudioUrl(URL.createObjectURL(blob));
+          }
+          setDurationSec(Math.round((Date.now() - startTimeRef.current) / 1000));
+        };
+        recorder.start();
+      } else {
+        // Older mobile Safari versions lack MediaRecorder. Capture PCM through
+        // Web Audio and package it as WAV so the normal upload/transcription path works.
+        const AudioContextCtor = window.AudioContext ?? (window as WebkitAudioWindow).webkitAudioContext;
+        if (!AudioContextCtor) throw new Error("Audio recording is not supported by this browser.");
+        const context = new AudioContextCtor();
+        await context.resume();
+        const source = context.createMediaStreamSource(stream);
+        const processor = context.createScriptProcessor(4096, 1, 1);
+        fallbackAudioChunksRef.current = [];
+        processor.onaudioprocess = (event) => {
+          fallbackAudioChunksRef.current.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+        };
+        source.connect(processor);
+        processor.connect(context.destination);
+        fallbackAudioContextRef.current = context;
+        fallbackSourceRef.current = source;
+        fallbackProcessorRef.current = processor;
         recClockRef.current = performance.now();
-      };
-      recorder.ondataavailable = (e) => {
-        if (e.data.size > 0) chunksRef.current.push(e.data);
-      };
-      recorder.onstop = () => {
-        if (chunksRef.current.length > 0) {
-          const blob = new Blob(chunksRef.current, {
-            type: recorder.mimeType || "audio/webm",
-          });
-          audioBlobRef.current = blob;
-          setAudioUrl(URL.createObjectURL(blob));
-        }
-        setDurationSec(Math.round((Date.now() - startTimeRef.current) / 1000));
-      };
-      recorder.start();
+      }
     } catch {
-      // Recording is best-effort; recognition can still proceed.
+      setError("Hindi masimulan ang pag-record. Tiyaking pinayagan ang mikropono at subukan muli.");
+      cleanupStream();
+      setStatus("error");
+      return;
     }
 
     // 3a) Prefer Vosk (offline). Try whenever a model is available.
@@ -311,7 +406,7 @@ export function useSpeechRecognition(
 
     // 3c) Whatever happened, we're now recording (possibly recording-only).
     setStatus("recording");
-  }, [applyTranscript, audioUrl, lang, modelUrl, offlineReady]);
+  }, [applyTranscript, audioUrl, cleanupStream, lang, modelUrl, offlineReady]);
 
   const stop = useCallback(async () => {
     // Stop whichever recognizer is active and capture its final transcript.
@@ -359,6 +454,19 @@ export function useSpeechRecognition(
         recorder.stop();
       });
     }
+    if (fallbackProcessorRef.current && fallbackAudioContextRef.current) {
+      fallbackProcessorRef.current.disconnect();
+      fallbackSourceRef.current?.disconnect();
+      const blob = encodeMonoWav(
+        fallbackAudioChunksRef.current,
+        fallbackAudioContextRef.current.sampleRate,
+      );
+      if (blob.size > 44) {
+        audioBlobRef.current = blob;
+        setAudioUrl(URL.createObjectURL(blob));
+      }
+      fallbackAudioChunksRef.current = [];
+    }
     cleanupStream();
     setStatus("done");
     return transcriptRef.current;
@@ -383,6 +491,7 @@ export function useSpeechRecognition(
     wordTimingsRef.current = [];
     recClockRef.current = 0;
     chunksRef.current = [];
+    fallbackAudioChunksRef.current = [];
     audioBlobRef.current = null;
     setDurationSec(0);
     setError(null);

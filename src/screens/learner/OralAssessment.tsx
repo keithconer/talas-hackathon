@@ -217,7 +217,7 @@ export default function OralAssessment({
           correctWords: finalResult.correctWords,
           totalWords: finalResult.totalWords,
           words: finalResult.words,
-          method: result.engine === 'none' ? 'manual' : 'speech-api',
+          method: finalResult.engine === 'none' ? 'manual' : 'speech-api',
           online: navigator.onLine,
           durationSec: result.durationSec || undefined,
           audioKey,
@@ -298,6 +298,7 @@ export default function OralAssessment({
 
   return (
     <div
+      className="oral-assessment"
       style={{
         width: '100%',
         background: 'var(--talas-paper)',
@@ -312,10 +313,28 @@ export default function OralAssessment({
           0%, 100% { transform: scaleY(0.3); }
           50% { transform: scaleY(1); }
         }
+        @media (max-width: 600px) {
+          .oral-assessment__topbar { padding: 8px 10px !important; gap: 5px !important; }
+          .oral-assessment__content { padding: 8px 10px 16px !important; gap: 8px !important; }
+          .oral-assessment__status-row { gap: 6px !important; align-items: center !important; }
+          .oral-assessment__mic-card { width: 76px !important; height: 66px !important; }
+          .oral-assessment__timer { width: 48px; }
+          .oral-assessment__timer-value { font-size: 26px !important; }
+          .oral-assessment__passage { justify-content: flex-start !important; padding: 16px !important; }
+          .oral-assessment__passage-text { font-size: clamp(19px, 5.5vw, 25px) !important; line-height: 1.65 !important; }
+          .oral-assessment__controls { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; gap: 6px !important; }
+          .oral-assessment__controls button { min-width: 0; padding: 6px 3px; font-size: 12px !important; }
+        }
+        @media (max-width: 360px) {
+          .oral-assessment__online-status { display: none; }
+          .oral-assessment__status-row { flex-wrap: wrap; }
+          .oral-assessment__wave-panel { min-width: calc(100% - 132px) !important; }
+        }
       `}</style>
 
       {/* MINIMAL TOP BAR */}
       <div
+        className="oral-assessment__topbar"
         style={{
           background: 'white',
           borderBottom: '1px solid var(--talas-line)',
@@ -342,6 +361,7 @@ export default function OralAssessment({
           ← Bumalik
         </button>
         <div
+          className="oral-assessment__title"
           style={{
             flex: 1,
             textAlign: 'center',
@@ -354,6 +374,7 @@ export default function OralAssessment({
           Pasalitang Pagbasa
         </div>
         <div
+          className="oral-assessment__online-status"
           style={{
             fontFamily: 'var(--font-ui)',
             fontSize: '12px',
@@ -372,6 +393,7 @@ export default function OralAssessment({
 
       {/* CONTENT AREA */}
       <div
+        className="oral-assessment__content"
         style={{
           flex: 1,
           padding: '12px 16px',
@@ -381,9 +403,10 @@ export default function OralAssessment({
         }}
       >
         {/* TOP ROW: Mic status + Timer */}
-        <div style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
+        <div className="oral-assessment__status-row" style={{ display: 'flex', gap: '12px', alignItems: 'flex-start' }}>
           {/* Mic panel */}
           <div
+            className="oral-assessment__mic-card"
             style={{
               width: '120px',
               height: '72px',
@@ -415,6 +438,7 @@ export default function OralAssessment({
 
           {/* CENTER: listening waveform + status (fills the gap) */}
           <div
+            className="oral-assessment__wave-panel"
             style={{
               flex: 1,
               alignSelf: 'stretch',
@@ -489,6 +513,7 @@ export default function OralAssessment({
 
           {/* Timer */}
           <div
+            className="oral-assessment__timer"
             style={{
               flexShrink: 0,
               display: 'flex',
@@ -498,6 +523,7 @@ export default function OralAssessment({
             }}
           >
             <div
+              className="oral-assessment__timer-value"
               style={{
                 fontFamily: 'var(--font-display)',
                 fontSize: '34px',
@@ -524,6 +550,7 @@ export default function OralAssessment({
 
         {/* PASSAGE CARD */}
         <div
+          className="oral-assessment__passage"
           style={{
             flex: 1,
             display: 'flex',
@@ -537,6 +564,7 @@ export default function OralAssessment({
           }}
         >
           <div
+            className="oral-assessment__passage-text"
             style={{
               fontFamily: 'var(--font-ui)',
               fontSize: '11px',
@@ -680,6 +708,12 @@ export default function OralAssessment({
           </div>
         )}
 
+        {isRecording && speech.engine === 'none' && (
+          <p style={{ fontFamily: 'var(--font-ui)', fontSize: '12px', color: 'var(--talas-muted)', margin: 0 }}>
+            Nire-record ang pagbasa. Awtomatikong susuriin ang transcript kapag ipinasa.
+          </p>
+        )}
+
         {/* RECORDING CONTROLS */}
         {!showControls ? (
           <button
@@ -721,6 +755,7 @@ export default function OralAssessment({
           </button>
         ) : (
           <div
+            className="oral-assessment__controls"
             style={{
               display: 'grid',
               gridTemplateColumns: 'repeat(3, 1fr)',

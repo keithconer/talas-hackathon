@@ -50,6 +50,8 @@ export interface PracticeProfile {
   consecutiveHighScores: number
   consecutiveLowScores: number
   completedActivityIds: string[]
+  /** Calendar dates on which practice activities were completed. */
+  completionDates?: string[]
 }
 
 /** Highest adaptive reading level (the Content Bank defines levels 1–5). */
@@ -143,6 +145,7 @@ export function updatePracticeLevel(
     ...profile,
     recentScores: [...profile.recentScores, scorePercent].slice(-10),
     completedActivityIds: [...profile.completedActivityIds, completedActivityId].slice(-20),
+    completionDates: [...(profile.completionDates ?? []), new Date().toISOString().slice(0, 10)].slice(-60),
     consecutiveHighScores: profile.consecutiveHighScores,
     consecutiveLowScores: profile.consecutiveLowScores,
     currentLevel: profile.currentLevel,

@@ -1,5 +1,5 @@
 import { Link, useParams } from 'react-router-dom'
-import { Lock, Sparkles, Bandage, Clock, Check, ShieldCheck, Image, X, ExternalLink, type LucideIcon } from 'lucide-react'
+import { Lock, Sparkles, Bandage, Clock, Check, ShieldCheck, ExternalLink, type LucideIcon } from 'lucide-react'
 import {
   learnerProfile,
   crlaDescription,
@@ -8,11 +8,6 @@ import {
 import ReadingAttempts from './ReadingAttempts'
 import { useCrlaGrade, crlaBadgeClasses } from './useCrlaGrade'
 import { useAssessmentAttempts } from './useAssessmentAttempts'
-import {
-  LEVEL_LABEL,
-  mixedReadingForLevel,
-  readingLevelFromAccuracy,
-} from '../../../data/contentBank'
 
 function fmtDate(iso: string): string {
   const d = new Date(iso)
@@ -23,33 +18,6 @@ function fmtDate(iso: string): string {
         day: 'numeric',
         year: 'numeric',
       })
-}
-
-interface PracticeView {
-  level: string
-  domain: string
-  note: string
-}
-
-/**
- * Derives the "Current Practice" view from the learner's real CRLA grade.
- * Maps the CRLA level to the matching adaptive practice band from the Content
- * Bank (1 Beginner … 5 Higher) and writes a short note from the actual data.
- */
-function derivePractice(grade: ReturnType<typeof useCrlaGrade>): PracticeView | null {
-  if (!grade.assessed || grade.level == null || grade.bestAccuracy == null) return null
-
-  const practiceLevel = readingLevelFromAccuracy(grade.bestAccuracy)
-  const band = LEVEL_LABEL[practiceLevel]
-  const next = mixedReadingForLevel(practiceLevel)
-
-  return {
-    level: `Antas ${practiceLevel} · ${band}`,
-    domain: 'Awtomatiko',
-    note: next
-      ? `Awtomatikong pinili mula sa CRLA (${grade.label}, ${grade.bestAccuracy}%): "${next.title}" ang susunod na babasahin.`
-      : `Awtomatikong pinili mula sa CRLA (${grade.label}, ${grade.bestAccuracy}%): Antas ${practiceLevel}.`,
-  }
 }
 
 type ReadingPace = 'fast' | 'steady' | 'slow' | 'struggling' | 'unknown'
@@ -174,7 +142,7 @@ function Overview() {
   // Hooks must run unconditionally and in the same order every render, so call
   // this before any early return.
   const grade = useCrlaGrade(learnerId)
-  const { pictureAttempts, interventionPlans } = useAssessmentAttempts(learnerId)
+  const { silentAttempts, interventionPlans } = useAssessmentAttempts(learnerId)
 
   if (!profile) return null
   const { intervention } = profile
@@ -201,23 +169,6 @@ function Overview() {
         )
       : null
 
-  // Current Practice is derived from the learner's real CRLA grade + reading
-  // submissions (the adaptive signal we actually have), not static mock detail.
-  const practice = derivePractice(grade)
-
-  // Separate Salita at Larawan grade metrics (never mixed with oral or silent reading).
-  const pictureAverage =
-    pictureAttempts.length > 0
-      ? Math.round(
-          pictureAttempts.reduce((sum, a) => sum + a.scorePercent, 0) /
-            pictureAttempts.length,
-        )
-      : null
-  const bestPicture =
-    pictureAttempts.length > 0
-      ? Math.max(...pictureAttempts.map((a) => a.scorePercent))
-      : null
-
   // Recent Activity shows the most recent reading + any completed intervention activity.
   const recentActivity: RecentActivityItem[] = [
     ...grade.attempts.slice(0, 1).map((a) => ({
@@ -239,12 +190,12 @@ function Overview() {
   const readingComment = deriveReadingComment(grade)
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* ------------------------------------------------------------ */}
       {/* 1. FORMAL ASSESSMENT SNAPSHOT — CRLA grade from best reading  */}
       {/* ------------------------------------------------------------ */}
       <section className="bg-white rounded-2xl border-2 border-sprout-500/30 shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 px-6 py-3 bg-sprout-50 border-b border-sprout-500/20">
+        <div className="flex items-center gap-2 px-4 py-3 bg-sprout-50 border-b border-sprout-500/20">
           <Lock className="w-5 h-5 text-charcoal" aria-hidden />
           <h2 className="font-display text-base font-bold text-charcoal">
             Formal Assessment Snapshot
@@ -255,7 +206,7 @@ function Overview() {
         </div>
 
         {grade.assessed && grade.bestAttempt ? (
-          <div className="p-6 space-y-5">
+          <div className="p-4 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* CRLA level */}
               <div className="bg-paper border border-gray-100 rounded-xl p-4 space-y-1">
@@ -314,7 +265,7 @@ function Overview() {
             </p>
           </div>
         ) : (
-          <p className="p-6 font-sans text-sm text-gray-400">
+          <p className="p-4 font-sans text-sm text-gray-400">
             No formal assessment on record yet. A CRLA level appears here once the learner completes
             a reading.
           </p>
@@ -326,134 +277,39 @@ function Overview() {
       {/* ------------------------------------------------------------ */}
       <ReadingAttempts learnerId={learnerId} />
 
-      {/* ------------------------------------------------------------ */}
-      {/* 3. SALITA AT LARAWAN — separate grade from Oral & Silent      */}
-      {/* ------------------------------------------------------------ */}
-      <section className="bg-white rounded-2xl border-2 border-amber-300/60 shadow-sm overflow-hidden">
-        <div className="flex flex-wrap items-center gap-2 px-6 py-3 bg-amber-50/70 border-b border-amber-200/60">
-          <Image className="w-5 h-5 text-amber-600" aria-hidden />
-          <h2 className="font-display text-base font-bold text-charcoal">
-            Salita at Larawan
-          </h2>
-          <span className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white text-amber-700 font-sans text-xs font-bold">
-            Separate Grade · Not in Oral & Silent Reading
+      <section className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h2 className="font-display text-sm font-semibold text-charcoal">Silent Reading Results</h2>
+            <p className="font-sans text-xs text-gray-500">Mga resulta sa tahimik na pagbasa at pag-unawa.</p>
+          </div>
+          <span className="rounded-full bg-sky-50 px-2.5 py-1 font-sans text-xs font-semibold text-sky-700">
+            {silentAttempts.length} submission{silentAttempts.length === 1 ? '' : 's'}
           </span>
         </div>
-
-        {pictureAttempts.length > 0 ? (
-          <div className="p-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-paper border border-gray-100 rounded-xl p-4 space-y-1">
-                <span className="font-sans text-xs text-gray-400 uppercase tracking-wide">
-                  Salita at Larawan Grade
-                </span>
-                <p className="font-display text-xl font-bold text-charcoal">
-                  {pictureAverage}%
-                </p>
-                <p className="font-sans text-xs text-gray-500">
-                  Average across {pictureAttempts.length} submission{pictureAttempts.length === 1 ? '' : 's'}
-                </p>
-              </div>
-              <div className="bg-paper border border-gray-100 rounded-xl p-4 space-y-1">
-                <span className="font-sans text-xs text-gray-400 uppercase tracking-wide">
-                  Best Score
-                </span>
-                <p className="font-display text-xl font-bold text-amber-600">
-                  {bestPicture}%
-                </p>
-                <p className="font-sans text-xs text-gray-500">
-                  Latest: {pictureAttempts[0].correctAnswers}/{pictureAttempts[0].totalQuestions} tama ({pictureAttempts[0].scorePercent}%)
-                </p>
-              </div>
-              <div className="bg-paper border border-gray-100 rounded-xl p-4 space-y-1">
-                <span className="font-sans text-xs text-gray-400 uppercase tracking-wide">
-                  Latest Submission
-                </span>
-                <p className="font-sans text-sm font-bold text-charcoal">
-                  {fmtDate(pictureAttempts[0].createdAt)}
-                </p>
-                <p className="font-sans text-xs text-gray-500">
-                  Hiwalay sa Oral at Silent Reading
-                </p>
-              </div>
-            </div>
-
-            <div className="rounded-xl bg-paper border border-gray-100 p-4 space-y-2">
-              <span className="font-sans text-xs text-gray-400 uppercase tracking-wide">
-                Latest Word Answers
-              </span>
-              <div className="flex flex-wrap gap-2">
-                {pictureAttempts[0].responses.map((res, idx) => (
-                  <span
-                    key={`${pictureAttempts[0].id}-${res.word}-${idx}`}
-                    className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-md font-sans text-xs font-semibold ${
-                      res.correct
-                        ? 'bg-sprout-50 text-sprout-600'
-                        : 'bg-coral-50 text-coral-500'
-                    }`}
-                  >
-                    {res.correct ? (
-                      <Check className="w-3.5 h-3.5" aria-hidden />
-                    ) : (
-                      <X className="w-3.5 h-3.5" aria-hidden />
-                    )}
-                    {res.word}
-                    {!res.correct ? ` (${res.selected})` : ''}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
+        {silentAttempts.length > 0 ? (
+          <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-3">
+            {silentAttempts.slice(0, 6).map((attempt) => (
+              <li key={attempt.id} className="flex min-w-0 items-center justify-between gap-3 rounded-lg border border-gray-100 bg-paper px-3 py-2.5">
+                <div className="min-w-0">
+                  <p className="truncate font-sans text-sm font-semibold text-charcoal">{attempt.title}</p>
+                  <p className="font-sans text-xs text-gray-500">{fmtDate(attempt.createdAt)} · {attempt.correctAnswers}/{attempt.totalQuestions} tama</p>
+                </div>
+                <span className="shrink-0 rounded-full bg-white px-2.5 py-1 font-sans text-sm font-bold text-sky-700">{attempt.scorePercent}%</span>
+              </li>
+            ))}
+          </ul>
         ) : (
-          <p className="p-6 font-sans text-sm text-gray-400">
-            No Salita at Larawan submissions yet. Results will appear here separately from oral and silent reading once completed.
-          </p>
-        )}
-      </section>
-
-      {/* ------------------------------------------------------------ */}
-      {/* 4. CURRENT PRACTICE — adaptive, clearly separate from formal  */}
-      {/* ------------------------------------------------------------ */}
-      <section className="bg-white rounded-2xl border border-dashed border-sky-500/40 shadow-sm overflow-hidden">
-        <div className="flex items-center gap-2 px-6 py-3 bg-sky-50 border-b border-sky-500/20">
-          <Sparkles className="w-5 h-5 text-charcoal" aria-hidden />
-          <h2 className="font-display text-base font-bold text-charcoal">Current Practice</h2>
-          <span className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white text-sky-500 font-sans text-xs font-bold">
-            Adaptive · not a formal record
-          </span>
-        </div>
-
-        {practice ? (
-          <div className="p-6 space-y-5">
-            <div className="p-4 rounded-xl bg-sky-50/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <span className="font-sans text-xs text-gray-400 uppercase tracking-wide">
-                  Current practice difficulty
-                </span>
-                <p className="font-sans text-sm font-bold text-charcoal">{practice.level}</p>
-              </div>
-              <span className="px-2.5 py-1 rounded-md bg-white text-sky-500 font-sans text-xs font-bold shrink-0">
-                {practice.domain}
-              </span>
-            </div>
-
-            <p className="font-sans text-xs text-gray-500 bg-sky-50/60 rounded-lg px-3 py-2">
-              {practice.note}
-            </p>
-          </div>
-        ) : (
-          <p className="p-6 font-sans text-sm text-gray-400">
-            Tatapusin muna ng mag-aaral ang paunang pagbasa upang awtomatikong matukoy ang susunod na antas.
-          </p>
+          <p className="rounded-lg bg-paper px-3 py-4 text-center font-sans text-sm text-gray-500">Wala pang resulta sa tahimik na pagbasa.</p>
         )}
       </section>
 
       {/* ------------------------------------------------------------ */}
       {/* 5 + 6. Intervention and Recent Activity (two columns)         */}
       {/* ------------------------------------------------------------ */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Intervention */}
-        <section className="bg-white rounded-2xl border-2 border-buttercup-500/40 shadow-sm p-6 space-y-4">
+        <section className="bg-white rounded-2xl border-2 border-buttercup-500/40 shadow-sm p-4 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <div className="flex items-center gap-2">
               <Bandage className="w-5 h-5 text-charcoal" aria-hidden />
@@ -584,7 +440,7 @@ function Overview() {
         </section>
 
         {/* Recent Activity */}
-        <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6 space-y-4">
+        <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
           <div className="flex items-center gap-2">
             <Clock className="w-5 h-5 text-charcoal" aria-hidden />
             <h2 className="font-display text-base font-bold text-charcoal">Recent Activity</h2>
