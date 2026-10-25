@@ -60,6 +60,19 @@ export const LEARNERS: LearnerRecord[] = [
   { id: 'AS-2041', name: 'Amina Santos', initials: 'AS', grade: 'Grade 1-B', sectionId: 'sampaguita', level: null, lastActive: '—', activeToday: false, code: 'AMI345' },
   { id: 'SM-1120', name: 'Sofia Manuel', initials: 'SM', grade: 'Grade 1-B', sectionId: 'sampaguita', level: null, lastActive: '—', activeToday: false, code: 'SOF678' },
   { id: 'RB-1130', name: 'Rafael Bautista', initials: 'RB', grade: 'Grade 1-B', sectionId: 'sampaguita', level: null, lastActive: '—', activeToday: false, code: 'RAF901' },
+  { id: 'EC-1142', name: 'Elijah Cruz', initials: 'EC', grade: 'Grade 1-B', sectionId: 'sampaguita', level: null, lastActive: '—', activeToday: false, code: 'ELI214' },
+  { id: 'NM-1153', name: 'Nina Mendoza', initials: 'NM', grade: 'Grade 1-B', sectionId: 'sampaguita', level: null, lastActive: '—', activeToday: false, code: 'NIN527' },
+  { id: 'LP-1164', name: 'Leo Padilla', initials: 'LP', grade: 'Grade 1-B', sectionId: 'sampaguita', level: null, lastActive: '—', activeToday: false, code: 'LEO836' },
+
+  // Additional Grade 2 · Rosal learners
+  { id: 'AR-2261', name: 'Alyssa Rivera', initials: 'AR', grade: 'Grade 2-A', sectionId: 'rosal', level: null, lastActive: '—', activeToday: false, code: 'ALY412' },
+  { id: 'MG-2272', name: 'Miguel Flores', initials: 'MF', grade: 'Grade 2-A', sectionId: 'rosal', level: null, lastActive: '—', activeToday: false, code: 'MIG638' },
+  { id: 'IS-2283', name: 'Isabel Soriano', initials: 'IS', grade: 'Grade 2-A', sectionId: 'rosal', level: null, lastActive: '—', activeToday: false, code: 'ISA925' },
+
+  // Additional Grade 3 · Mabini learners
+  { id: 'DC-3175', name: 'Daniel Castillo', initials: 'DC', grade: 'Grade 3-A', sectionId: 'mabini', level: null, lastActive: '—', activeToday: false, code: 'DAN317' },
+  { id: 'YT-3186', name: 'Ysabel Torres', initials: 'YT', grade: 'Grade 3-A', sectionId: 'mabini', level: null, lastActive: '—', activeToday: false, code: 'YSA642' },
+  { id: 'KF-3197', name: 'Kian Fernandez', initials: 'KF', grade: 'Grade 3-A', sectionId: 'mabini', level: null, lastActive: '—', activeToday: false, code: 'KIA958' },
 ]
 
 /* ------------------------------------------------------------------ */
